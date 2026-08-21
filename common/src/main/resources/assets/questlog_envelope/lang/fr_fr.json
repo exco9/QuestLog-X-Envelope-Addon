@@ -1,0 +1,12 @@
+{
+  "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
+  "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
+  "questlog_envelope.editor.letter.sender": "Service expéditeur (optionnel)",
+  "questlog_envelope.editor.letter.sender_hint": "Vide = service postal Envelope",
+  "questlog_envelope.editor.letter.letter_title": "Titre de la lettre",
+  "questlog_envelope.editor.letter.body": "Contenu de la lettre",
+  "questlog_envelope.editor.letter.auto_claim": "Récompense automatique : %s",
+  "questlog_envelope.editor.letter.invalid_sender": "Identifiant du service expéditeur invalide",
+  "questlog.reward.default.questlog_envelope.letter": "Lettre",
+  "questlog.objective.default.questlog_envelope.mail_received": "Recevoir la lettre de quête"
+}
