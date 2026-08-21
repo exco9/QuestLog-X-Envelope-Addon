@@ -1,9 +1,11 @@
 package io.github.exco9.questlogenvelope;
 
+import io.github.exco9.questlogenvelope.quest.LetterReward;
 import io.github.exco9.questlogenvelope.quest.MailReceivedObjective;
 import net.minecraft.resources.ResourceLocation;
 import org.infernalstudios.questlog.core.quests.EditorMetadata;
 import org.infernalstudios.questlog.core.quests.QuestObjectiveRegistry;
+import org.infernalstudios.questlog.core.quests.QuestRewardRegistry;
 
 public final class QuestlogEnvelope {
     public static final String MOD_ID = "questlog_envelope";
@@ -28,6 +30,12 @@ public final class QuestlogEnvelope {
                         "required_amount",
                         EditorMetadata.SuggestionType.QUEST
                 )
+        );
+
+        QuestRewardRegistry.register(
+                id("letter"),
+                LetterReward::new,
+                new EditorMetadata("sender", "Sender service:", null)
         );
     }
 
