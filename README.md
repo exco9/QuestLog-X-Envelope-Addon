@@ -12,6 +12,34 @@ Current development target:
 
 See [`SYNTHESIS.md`](SYNTHESIS.md) for the architecture and analysis of both upstream projects.
 
+## Questlog editor integration
+
+The compatibility types are registered through Questlog's public objective/reward registries, so they are available directly from Questlog's in-game quest editor.
+
+### Make a quest unlock when its letter arrives
+
+1. Open/create the destination quest in Questlog's editor.
+2. Open **Prerequisites**.
+3. Add the **Mail Received** type (`questlog_envelope:mail_received`).
+4. Leave **Letter quest marker** empty to use the current quest ID automatically, or select another Quest ID.
+5. Leave the required amount at `1` for a normal quest letter.
+
+### Send a quest letter from another quest
+
+1. Open the source quest in Questlog's editor.
+2. Open **Rewards**.
+3. Add **Letter** (`questlog_envelope:letter`).
+4. Use **Quest granted by letter** to select the destination Quest ID. This field uses Questlog's native Quest-ID autocomplete.
+5. Optionally set the reward **Name** and **Icon** as usual in Questlog.
+6. Press **Envelope Letter Options...** to configure:
+   - sender service (blank uses Envelope's mail service);
+   - physical letter title;
+   - physical letter body;
+   - whether the reward is auto-claimed.
+7. Press **Done**, then save the quest normally in Questlog.
+
+The Envelope-specific editor works on Questlog's temporary reward entry, so Questlog's normal **Cancel** behavior remains available.
+
 ## Quest unlocked by receiving a letter
 
 A quest can wait for a marked Envelope letter before Questlog considers it triggered:
@@ -80,6 +108,8 @@ Implemented on `dev/initial-integration`:
 - replay of pending unlocks after Questlog player data is loaded;
 - `questlog_envelope:letter` reward;
 - `grants_quest` support;
+- Questlog in-game editor integration for the compatibility objective/reward;
+- dedicated Envelope letter options screen with English/French translations;
 - Gradle CI definition.
 
 Next steps:
