@@ -54,6 +54,8 @@ The addon currently provides the first version of a postal reward:
 
 When the reward is claimed, Envelope starts a real service delivery to the player's `PlayerAddress`. The `grants_quest` value is stored on the mail stack and is consumed by the `mail_received` prerequisite when the delivery reaches the player's mailbox.
 
+Quest-letter markers are persisted in world `SavedData`. If the letter reaches the mailbox while the player is offline, the marker remains pending and is applied after Questlog finishes loading/deserializing that player's quests on the next login.
+
 This enables narrative chains such as:
 
 ```text
@@ -61,7 +63,7 @@ Quest A complete
   -> Questlog reward
   -> Envelope letter is dispatched
   -> pigeon delivers it to the player
-  -> quest marker is detected
+  -> quest marker is detected/persisted
   -> Quest B becomes triggered by Questlog
 ```
 
@@ -74,14 +76,16 @@ Implemented on `dev/initial-integration`:
 - quest marker stored in vanilla `CUSTOM_DATA`;
 - minimal mixin observing successful Envelope mailbox insertion;
 - routing into the player's native Questlog prerequisites;
+- persistence of unlocks received while the player is offline;
+- replay of pending unlocks after Questlog player data is loaded;
 - `questlog_envelope:letter` reward;
 - `grants_quest` support;
-- Gradle CI.
+- Gradle CI definition.
 
 Next steps:
 
-- persist quest-letter unlocks received while the player is offline;
 - implement `questlog_envelope:mail_delivery` for sending mail to quest services;
 - add package/content filters;
 - add service replies and quest packages;
-- add game/integration tests.
+- add game/integration tests;
+- investigate why GitHub Actions checks are not currently appearing on the private repository.
