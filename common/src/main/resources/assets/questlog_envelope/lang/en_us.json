@@ -1,0 +1,12 @@
+{
+  "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
+  "questlog_envelope.editor.letter.title": "Envelope Letter Options",
+  "questlog_envelope.editor.letter.sender": "Sender service (optional)",
+  "questlog_envelope.editor.letter.sender_hint": "Blank = Envelope Mail Service",
+  "questlog_envelope.editor.letter.letter_title": "Letter title",
+  "questlog_envelope.editor.letter.body": "Letter body",
+  "questlog_envelope.editor.letter.auto_claim": "Auto-claim: %s",
+  "questlog_envelope.editor.letter.invalid_sender": "Invalid sender service ID",
+  "questlog.reward.default.questlog_envelope.letter": "Letter",
+  "questlog.objective.default.questlog_envelope.mail_received": "Receive quest letter"
+}
