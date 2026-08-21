@@ -1,0 +1,48 @@
+package io.github.exco9.questlogenvelope.mixin;
+
+import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
+import io.github.exco9.questlogenvelope.quest.QuestMailUnlocker;
+import io.github.mortuusars.envelope.world.mail.address.type.PlayerAddress;
+import io.github.mortuusars.envelope.world.mail.dropoff.BlockDropOffHandler;
+import io.github.mortuusars.envelope.world.mail.dropoff.MailDropOffContext;
+import io.github.mortuusars.envelope.world.mail.dropoff.MailDropOffResult;
+import net.minecraft.server.level.ServerPlayer;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+/**
+ * Envelope currently has no public callback for successful mailbox insertion.
+ * This mixin observes only the successful return path and immediately delegates
+ * all business logic to common addon code.
+ */
+@Mixin(value = BlockDropOffHandler.class, remap = false)
+public abstract class BlockDropOffHandlerMixin {
+    @Inject(method = "handle", at = @At("RETURN"), remap = false)
+    private void questlogEnvelope$onDelivered(
+            MailDropOffContext context,
+            CallbackInfoReturnable<MailDropOffResult> cir
+    ) {
+        if (cir.getReturnValue() != MailDropOffResult.CONSUME || context.isReturned()) {
+            return;
+        }
+
+        // PlayerDropOffHandler resolves PlayerAddress -> BlockAddress but keeps the
+        // original Delivery recipient, so this remains available after mailbox insertion.
+        if (!(context.getDelivery().getRecipient() instanceof PlayerAddress recipient)) {
+            return;
+        }
+
+        QuestMailMarker.get(context.getMail()).ifPresent(questId -> {
+            ServerPlayer player = context.getLevel()
+                    .getServer()
+                    .getPlayerList()
+                    .getPlayerByName(recipient.getString());
+
+            if (player != null) {
+                QuestMailUnlocker.unlock(player, questId);
+            }
+        });
+    }
+}
