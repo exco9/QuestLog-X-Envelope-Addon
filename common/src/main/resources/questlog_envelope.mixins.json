@@ -7,6 +7,9 @@
     "BlockDropOffHandlerMixin",
     "QuestlogEventsMixin"
   ],
+  "client": [
+    "QuestEditorScreenMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
