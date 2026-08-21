@@ -10,4 +10,6 @@ dependencies {
     // Runtime distributions are supplied by the loader-specific projects.
     modCompileOnly("maven.modrinth:ufQYCY6N:${rootProject.questlog_neoforge_version_id}") { transitive = false }
     modCompileOnly("curse.maven:envelope-1281170:${rootProject.envelope_neoforge_file_id}") { transitive = false }
+
+    compileOnly "org.jetbrains:annotations:26.0.2-1"
 }
