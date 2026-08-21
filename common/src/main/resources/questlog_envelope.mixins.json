@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.exco9.questlogenvelope.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlockDropOffHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
