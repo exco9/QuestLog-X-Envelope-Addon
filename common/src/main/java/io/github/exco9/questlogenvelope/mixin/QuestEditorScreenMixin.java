@@ -53,10 +53,15 @@ public abstract class QuestEditorScreenMixin extends Screen {
         Button options = Button.builder(
                 Component.translatable("questlog_envelope.editor.letter.options"),
                 button -> {
-                    questlogEnvelope$stashQuestlogFields();
+                    // Work on a detached copy. If the player later presses Questlog's
+                    // Cancel button, the original list entry is still untouched.
+                    JsonObject workingCopy = this.editingEntry.deepCopy();
+                    questlogEnvelope$stashQuestlogFields(workingCopy);
+                    this.editingEntry = workingCopy;
+
                     Minecraft.getInstance().setScreen(new LetterRewardEditorScreen(
                             (QuestEditorScreen) (Object) this,
-                            this.editingEntry
+                            workingCopy
                     ));
                 }
         ).bounds(panel2X + 15, panel2Y + 138, 130, 16).build();
@@ -65,57 +70,66 @@ public abstract class QuestEditorScreenMixin extends Screen {
     }
 
     /**
-     * Switching screens causes Questlog to rebuild its widgets. Preserve the
-     * currently typed generic fields in the shared JsonObject first, without
-     * committing the reward to the quest list (so Questlog's Cancel semantics
-     * remain intact).
+     * Questlog knows how to save custom target keys, but its generic cleanup
+     * list does not know our `grants_quest` key. Explicitly remove it when the
+     * editor field is cleared.
      */
-    private void questlogEnvelope$stashQuestlogFields() {
-        if (this.editingEntry == null) {
-            return;
+    @Inject(method = "saveEditingEntry", at = @At("HEAD"), remap = false)
+    private void questlogEnvelope$clearEmptyGrantedQuest(CallbackInfo ci) {
+        if ("questlog_envelope:letter".equals(this.editingType)
+                && this.editingEntry != null
+                && this.entryTargetBox != null
+                && this.entryTargetBox.getValue().trim().isEmpty()) {
+            this.editingEntry.remove("grants_quest");
         }
+    }
 
-        this.editingEntry.addProperty("type", this.editingType);
+    /**
+     * Switching screens causes Questlog to rebuild its widgets. Preserve the
+     * currently typed generic fields in a detached working copy first.
+     */
+    private void questlogEnvelope$stashQuestlogFields(JsonObject target) {
+        target.addProperty("type", this.editingType);
 
         if (this.entryNameBox != null) {
             String name = this.entryNameBox.getValue().trim();
             if (name.isEmpty()) {
-                this.editingEntry.remove("name");
+                target.remove("name");
             } else {
-                this.editingEntry.addProperty("name", name);
+                target.addProperty("name", name);
             }
         }
 
         if (this.entryTargetBox != null) {
             String grantedQuest = this.entryTargetBox.getValue().trim();
             if (grantedQuest.isEmpty()) {
-                this.editingEntry.remove("grants_quest");
+                target.remove("grants_quest");
             } else {
-                this.editingEntry.addProperty("grants_quest", grantedQuest);
+                target.addProperty("grants_quest", grantedQuest);
             }
         }
 
-        this.editingEntry.remove("icon");
+        target.remove("icon");
         if (this.entryIconBox != null) {
             String icon = this.entryIconBox.getValue().trim();
             if (!icon.isEmpty()) {
                 if (icon.startsWith("{") && icon.endsWith("}")) {
                     try {
                         JsonElement parsed = JsonParser.parseString(icon);
-                        this.editingEntry.add("icon", parsed);
+                        target.add("icon", parsed);
                     } catch (Exception ignored) {
                         JsonObject iconObject = new JsonObject();
                         iconObject.addProperty("item", icon);
-                        this.editingEntry.add("icon", iconObject);
+                        target.add("icon", iconObject);
                     }
                 } else if (icon.contains("textures/") || icon.endsWith(".png")) {
                     JsonObject iconObject = new JsonObject();
                     iconObject.addProperty("texture", icon);
-                    this.editingEntry.add("icon", iconObject);
+                    target.add("icon", iconObject);
                 } else {
                     JsonObject iconObject = new JsonObject();
                     iconObject.addProperty("item", icon);
-                    this.editingEntry.add("icon", iconObject);
+                    target.add("icon", iconObject);
                 }
             }
         }
