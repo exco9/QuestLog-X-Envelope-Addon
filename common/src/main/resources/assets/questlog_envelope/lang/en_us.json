@@ -1,6 +1,11 @@
 {
+  "questlog_envelope.editor.type.letter": "Envelope Letter",
+  "questlog_envelope.editor.type.package": "Envelope Package",
+  "questlog_envelope.editor.type.mail_received": "Mail Received",
+
   "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
   "questlog_envelope.editor.letter.title": "Envelope Letter Options",
+  "questlog_envelope.editor.letter.settings": "Reward settings",
   "questlog_envelope.editor.letter.sender": "Sender service (optional)",
   "questlog_envelope.editor.letter.sender_hint": "Blank = Envelope Mail Service",
   "questlog_envelope.editor.letter.letter_title": "Letter title",
@@ -10,13 +15,19 @@
 
   "questlog_envelope.editor.package.options": "Envelope Package Options...",
   "questlog_envelope.editor.package.title": "Envelope Package Options",
+  "questlog_envelope.editor.package.settings": "Reward settings",
   "questlog_envelope.editor.package.sender": "Sender service (optional)",
   "questlog_envelope.editor.package.sender_hint": "Blank = Envelope Mail Service",
   "questlog_envelope.editor.package.package_title": "Package title",
-  "questlog_envelope.editor.package.items": "Contents (one per line: item [count])",
+  "questlog_envelope.editor.package.items": "Contents",
   "questlog_envelope.editor.package.auto_claim": "Auto-claim: %s",
   "questlog_envelope.editor.package.invalid_sender": "Invalid sender service ID",
-  "questlog_envelope.editor.package.invalid_items": "Invalid contents. Use item [count] or ItemStack JSON.",
+  "questlog_envelope.editor.package.invalid_items": "One or more package items could not be saved.",
+  "questlog_envelope.editor.package.cannot_package": "That item cannot be put inside an Envelope package.",
+  "questlog_envelope.editor.package.page": "Package %s / %s",
+  "questlog_envelope.editor.package.add_package": "+ Add package",
+  "questlog_envelope.editor.package.remove_package": "Remove package",
+  "questlog_envelope.editor.package.copy_hint": "Select a package slot, then click an inventory item",
 
   "questlog.reward.default.questlog_envelope.letter": "Letter",
   "questlog.reward.default.questlog_envelope.package": "Package",
