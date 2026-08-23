@@ -34,11 +34,13 @@ public final class QuestMailDelivery {
     /**
      * Uses normal Envelope service delivery when the player has a default mailbox.
      * Without a mailbox, starts a visible service pigeon directly near the player
-     * and lets PlayerDropOffHandlerMixin drop the delivered mail at their feet.
+     * when they are in the Overworld. Envelope's mail service only operates there;
+     * in other dimensions we safely fall back to an immediate item drop.
      */
     public static void dispatch(ServerPlayer player, ItemStack mail, @Nullable ResourceLocation senderId) {
-        ServerLevel level = player.serverLevel();
-        MailService service = MailService.of(level);
+        ServerLevel playerLevel = player.serverLevel();
+        ServerLevel mailLevel = player.getServer().overworld();
+        MailService service = MailService.of(mailLevel);
         Address sender = resolveSender(service, senderId);
         PlayerAddress recipient = new PlayerAddress(player);
 
@@ -54,7 +56,16 @@ public final class QuestMailDelivery {
             return;
         }
 
-        startDirectPlayerDelivery(service, player, mail, sender, recipient);
+        if (playerLevel == mailLevel) {
+            startDirectPlayerDelivery(service, player, mail, sender, recipient);
+            return;
+        }
+
+        Envelope.LOGGER.debug(
+                "Questlog mail recipient '{}' has no mailbox and is outside the Overworld; dropping reward mail directly.",
+                player.getScoreboardName()
+        );
+        dropImmediately(player, mail);
     }
 
     private static void startDirectPlayerDelivery(
@@ -128,7 +139,7 @@ public final class QuestMailDelivery {
         Mail.setId(delivered, Id.create(player.level()));
 
         player.drop(delivered, false);
-        recordDelivered(player.serverLevel(), recipient.getString(), delivered);
+        recordDelivered(player.getServer().overworld(), recipient.getString(), delivered);
     }
 
     /** Records a quest marker and applies it immediately when the player is online. */
