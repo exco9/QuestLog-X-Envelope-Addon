@@ -10,23 +10,20 @@ import net.minecraft.world.item.component.CustomData;
 import java.util.Optional;
 
 /**
- * Stores the quest-unlock marker directly on an Envelope ItemStack using vanilla CUSTOM_DATA.
- *
- * Keeping this data in a vanilla component avoids a loader-specific custom component registry
- * for the first implementation and lets Envelope transport the marker with the mail stack.
+ * Stores Questlog/Envelope integration markers directly on an Envelope ItemStack
+ * using vanilla CUSTOM_DATA.
  */
 public final class QuestMailMarker {
     private static final String ROOT_KEY = "questlog_envelope";
     private static final String QUEST_ID_KEY = "quest_id";
+    private static final String DIRECT_PLAYER_DROP_KEY = "direct_player_drop";
 
     private QuestMailMarker() {
     }
 
     public static ItemStack set(ItemStack stack, ResourceLocation questId) {
-        CompoundTag customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        CompoundTag addonData = customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)
-                ? customData.getCompound(ROOT_KEY)
-                : new CompoundTag();
+        CompoundTag customData = getCustomData(stack);
+        CompoundTag addonData = getAddonData(customData);
 
         addonData.putString(QUEST_ID_KEY, questId.toString());
         customData.put(ROOT_KEY, addonData);
@@ -55,5 +52,66 @@ public final class QuestMailMarker {
         } catch (RuntimeException ignored) {
             return Optional.empty();
         }
+    }
+
+    public static ItemStack markDirectPlayerDrop(ItemStack stack) {
+        CompoundTag customData = getCustomData(stack);
+        CompoundTag addonData = getAddonData(customData);
+        addonData.putBoolean(DIRECT_PLAYER_DROP_KEY, true);
+        customData.put(ROOT_KEY, addonData);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
+        return stack;
+    }
+
+    public static boolean isDirectPlayerDrop(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null) {
+            return false;
+        }
+
+        CompoundTag customData = data.copyTag();
+        if (!customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)) {
+            return false;
+        }
+
+        return customData.getCompound(ROOT_KEY).getBoolean(DIRECT_PLAYER_DROP_KEY);
+    }
+
+    public static ItemStack clearDirectPlayerDrop(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null) {
+            return stack;
+        }
+
+        CompoundTag customData = data.copyTag();
+        if (!customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)) {
+            return stack;
+        }
+
+        CompoundTag addonData = customData.getCompound(ROOT_KEY);
+        addonData.remove(DIRECT_PLAYER_DROP_KEY);
+
+        if (addonData.isEmpty()) {
+            customData.remove(ROOT_KEY);
+        } else {
+            customData.put(ROOT_KEY, addonData);
+        }
+
+        if (customData.isEmpty()) {
+            stack.remove(DataComponents.CUSTOM_DATA);
+        } else {
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
+        }
+        return stack;
+    }
+
+    private static CompoundTag getCustomData(ItemStack stack) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+    }
+
+    private static CompoundTag getAddonData(CompoundTag customData) {
+        return customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)
+                ? customData.getCompound(ROOT_KEY)
+                : new CompoundTag();
     }
 }

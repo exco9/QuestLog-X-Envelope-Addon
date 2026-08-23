@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.exco9.questlogenvelope.client.LetterRewardEditorScreen;
+import io.github.exco9.questlogenvelope.client.PackageRewardEditorScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Adds a compact Envelope-specific editor entry point without replacing
+ * Adds compact Envelope-specific editor entry points without replacing
  * Questlog's editor. Questlog remains responsible for type selection,
  * Quest-ID autocomplete, reward display name and icon.
  */
@@ -45,26 +46,29 @@ public abstract class QuestEditorScreenMixin extends Screen {
     }
 
     @Inject(method = "buildRightPageEditEntry", at = @At("TAIL"), remap = false)
-    private void questlogEnvelope$addLetterOptions(int panel2X, int panel2Y, CallbackInfo ci) {
-        if (!"questlog_envelope:letter".equals(this.editingType) || this.editingEntry == null) {
+    private void questlogEnvelope$addMailOptions(int panel2X, int panel2Y, CallbackInfo ci) {
+        if (!questlogEnvelope$isMailReward(this.editingType) || this.editingEntry == null) {
             return;
         }
 
-        Button options = Button.builder(
-                Component.translatable("questlog_envelope.editor.letter.options"),
-                button -> {
-                    // Work on a detached copy. If the player later presses Questlog's
-                    // Cancel button, the original list entry is still untouched.
-                    JsonObject workingCopy = this.editingEntry.deepCopy();
-                    questlogEnvelope$stashQuestlogFields(workingCopy);
-                    this.editingEntry = workingCopy;
+        boolean packageReward = "questlog_envelope:package".equals(this.editingType);
+        Component label = Component.translatable(packageReward
+                ? "questlog_envelope.editor.package.options"
+                : "questlog_envelope.editor.letter.options");
 
-                    Minecraft.getInstance().setScreen(new LetterRewardEditorScreen(
-                            (QuestEditorScreen) (Object) this,
-                            workingCopy
-                    ));
-                }
-        ).bounds(panel2X + 15, panel2Y + 138, 130, 16).build();
+        Button options = Button.builder(label, button -> {
+            // Work on a detached copy. If the player later presses Questlog's
+            // Cancel button, the original list entry is still untouched.
+            JsonObject workingCopy = this.editingEntry.deepCopy();
+            questlogEnvelope$stashQuestlogFields(workingCopy);
+            this.editingEntry = workingCopy;
+
+            QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
+            Screen editor = packageReward
+                    ? new PackageRewardEditorScreen(parent, workingCopy)
+                    : new LetterRewardEditorScreen(parent, workingCopy);
+            Minecraft.getInstance().setScreen(editor);
+        }).bounds(panel2X + 15, panel2Y + 138, 130, 16).build();
 
         this.addRenderableWidget(options);
     }
@@ -76,7 +80,7 @@ public abstract class QuestEditorScreenMixin extends Screen {
      */
     @Inject(method = "saveEditingEntry", at = @At("HEAD"), remap = false)
     private void questlogEnvelope$clearEmptyGrantedQuest(CallbackInfo ci) {
-        if ("questlog_envelope:letter".equals(this.editingType)
+        if (questlogEnvelope$isMailReward(this.editingType)
                 && this.editingEntry != null
                 && this.entryTargetBox != null
                 && this.entryTargetBox.getValue().trim().isEmpty()) {
@@ -133,5 +137,9 @@ public abstract class QuestEditorScreenMixin extends Screen {
                 }
             }
         }
+    }
+
+    private static boolean questlogEnvelope$isMailReward(String type) {
+        return "questlog_envelope:letter".equals(type) || "questlog_envelope:package".equals(type);
     }
 }

@@ -7,6 +7,18 @@
   "questlog_envelope.editor.letter.body": "Letter body",
   "questlog_envelope.editor.letter.auto_claim": "Auto-claim: %s",
   "questlog_envelope.editor.letter.invalid_sender": "Invalid sender service ID",
+
+  "questlog_envelope.editor.package.options": "Envelope Package Options...",
+  "questlog_envelope.editor.package.title": "Envelope Package Options",
+  "questlog_envelope.editor.package.sender": "Sender service (optional)",
+  "questlog_envelope.editor.package.sender_hint": "Blank = Envelope Mail Service",
+  "questlog_envelope.editor.package.package_title": "Package title",
+  "questlog_envelope.editor.package.items": "Contents (one per line: item [count])",
+  "questlog_envelope.editor.package.auto_claim": "Auto-claim: %s",
+  "questlog_envelope.editor.package.invalid_sender": "Invalid sender service ID",
+  "questlog_envelope.editor.package.invalid_items": "Invalid contents. Use item [count] or ItemStack JSON.",
+
   "questlog.reward.default.questlog_envelope.letter": "Letter",
-  "questlog.objective.default.questlog_envelope.mail_received": "Receive quest letter"
+  "questlog.reward.default.questlog_envelope.package": "Package",
+  "questlog.objective.default.questlog_envelope.mail_received": "Receive quest mail"
 }

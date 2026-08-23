@@ -2,6 +2,7 @@ package io.github.exco9.questlogenvelope;
 
 import io.github.exco9.questlogenvelope.quest.LetterReward;
 import io.github.exco9.questlogenvelope.quest.MailReceivedObjective;
+import io.github.exco9.questlogenvelope.quest.PackageReward;
 import net.minecraft.resources.ResourceLocation;
 import org.infernalstudios.questlog.core.quests.EditorMetadata;
 import org.infernalstudios.questlog.core.quests.QuestObjectiveRegistry;
@@ -28,20 +29,31 @@ public final class QuestlogEnvelope {
                 MailReceivedObjective::new,
                 new EditorMetadata(
                         "quest",
-                        "Letter quest marker (blank = this quest):",
+                        "Letter/package quest marker (blank = this quest):",
                         "required_amount",
                         EditorMetadata.SuggestionType.QUEST
                 )
         );
 
-        // The native Questlog field provides Quest-ID autocomplete for grants_quest.
-        // Sender/title/body/auto-claim are edited by our small client-side editor panel.
+        // Questlog owns the common reward fields and Quest-ID autocomplete.
+        // Envelope-specific fields are edited by the addon client screens.
         QuestRewardRegistry.register(
                 id("letter"),
                 LetterReward::new,
                 new EditorMetadata(
                         "grants_quest",
                         "Quest granted by letter (optional):",
+                        null,
+                        EditorMetadata.SuggestionType.QUEST
+                )
+        );
+
+        QuestRewardRegistry.register(
+                id("package"),
+                PackageReward::new,
+                new EditorMetadata(
+                        "grants_quest",
+                        "Quest granted by package (optional):",
                         null,
                         EditorMetadata.SuggestionType.QUEST
                 )

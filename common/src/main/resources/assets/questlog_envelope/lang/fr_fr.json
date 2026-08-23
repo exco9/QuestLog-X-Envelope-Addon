@@ -7,6 +7,18 @@
   "questlog_envelope.editor.letter.body": "Contenu de la lettre",
   "questlog_envelope.editor.letter.auto_claim": "Récompense automatique : %s",
   "questlog_envelope.editor.letter.invalid_sender": "Identifiant du service expéditeur invalide",
+
+  "questlog_envelope.editor.package.options": "Options de colis Envelope...",
+  "questlog_envelope.editor.package.title": "Options de colis Envelope",
+  "questlog_envelope.editor.package.sender": "Service expéditeur (optionnel)",
+  "questlog_envelope.editor.package.sender_hint": "Vide = service postal Envelope",
+  "questlog_envelope.editor.package.package_title": "Titre du colis",
+  "questlog_envelope.editor.package.items": "Contenu (une ligne : objet [quantité])",
+  "questlog_envelope.editor.package.auto_claim": "Récompense automatique : %s",
+  "questlog_envelope.editor.package.invalid_sender": "Identifiant du service expéditeur invalide",
+  "questlog_envelope.editor.package.invalid_items": "Contenu invalide. Utilisez objet [quantité] ou du JSON ItemStack.",
+
   "questlog.reward.default.questlog_envelope.letter": "Lettre",
-  "questlog.objective.default.questlog_envelope.mail_received": "Recevoir la lettre de quête"
+  "questlog.reward.default.questlog_envelope.package": "Colis",
+  "questlog.objective.default.questlog_envelope.mail_received": "Recevoir le courrier de quête"
 }
