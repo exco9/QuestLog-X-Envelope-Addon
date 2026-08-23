@@ -2,6 +2,7 @@ package io.github.exco9.questlogenvelope.client;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import io.github.mortuusars.envelope.client.gui.screen.PackageScreen;
@@ -10,8 +11,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -38,10 +39,8 @@ public final class PackageRewardEditorScreen extends Screen {
 
     private EditBox senderBox;
     private EditBox packageTitleBox;
-    private Button autoClaimButton;
     private Button previousPageButton;
     private Button nextPageButton;
-    private Button addPageButton;
     private Button removePageButton;
 
     private boolean autoClaim;
@@ -114,7 +113,7 @@ public final class PackageRewardEditorScreen extends Screen {
         this.packageTitleBox.setValue(getString("title", "Package"));
         this.addRenderableWidget(this.packageTitleBox);
 
-        this.autoClaimButton = this.addRenderableWidget(Button.builder(autoClaimLabel(), button -> {
+        this.addRenderableWidget(Button.builder(autoClaimLabel(), button -> {
             this.autoClaim = !this.autoClaim;
             button.setMessage(autoClaimLabel());
         }).bounds(this.panelX, this.panelY + 103, this.panelWidth, 18).build());
@@ -130,7 +129,7 @@ public final class PackageRewardEditorScreen extends Screen {
                 button -> changePage(1)
         ).bounds(this.packageLeft + 133, this.packageTop + 7, smallButtonWidth, 18).build());
 
-        this.addPageButton = this.addRenderableWidget(Button.builder(
+        this.addRenderableWidget(Button.builder(
                 Component.translatable("questlog_envelope.editor.package.add_package"),
                 button -> addPackagePage()
         ).bounds(this.panelX, this.panelY + 129, this.panelWidth, 18).build());
@@ -163,27 +162,61 @@ public final class PackageRewardEditorScreen extends Screen {
         if (this.minecraft == null || this.minecraft.level == null) {
             return;
         }
+
+        // New visual format: every nested array is one real six-slot package.
+        if (this.rewardEntry.has("packages") && this.rewardEntry.get("packages").isJsonArray()) {
+            JsonArray packages = this.rewardEntry.getAsJsonArray("packages");
+            for (JsonElement pageElement : packages) {
+                if (!pageElement.isJsonArray()) {
+                    continue;
+                }
+
+                JsonArray page = pageElement.getAsJsonArray();
+                for (int slot = 0; slot < SLOTS_PER_PACKAGE; slot++) {
+                    JsonElement definition = slot < page.size() ? page.get(slot) : JsonNull.INSTANCE;
+                    this.configuredItems.add(parseStack(definition));
+                }
+            }
+            if (!this.configuredItems.isEmpty()) {
+                return;
+            }
+        }
+
+        // Backward compatibility: older quests stored one flat item list. Chunk it
+        // into visual pages of six slots when first opened in the new editor.
         if (!this.rewardEntry.has("items") || !this.rewardEntry.get("items").isJsonArray()) {
             return;
         }
 
         for (JsonElement definition : this.rewardEntry.getAsJsonArray("items")) {
-            ItemStack stack = ItemReward.parseItemStack(definition, this.minecraft.level.registryAccess());
-            if (stack.isEmpty()) {
-                continue;
+            ItemStack stack = parseStack(definition);
+            if (!stack.isEmpty()) {
+                this.configuredItems.add(stack);
             }
+        }
+    }
 
-            if (definition.isJsonObject()) {
-                JsonObject object = definition.getAsJsonObject();
-                if (object.has("count") && object.get("count").isJsonPrimitive()) {
-                    try {
-                        stack.setCount(Math.max(1, object.get("count").getAsInt()));
-                    } catch (RuntimeException ignored) {
-                    }
+    private ItemStack parseStack(JsonElement definition) {
+        if (definition == null || definition.isJsonNull()
+                || this.minecraft == null || this.minecraft.level == null) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack stack = ItemReward.parseItemStack(definition, this.minecraft.level.registryAccess());
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        if (definition.isJsonObject()) {
+            JsonObject object = definition.getAsJsonObject();
+            if (object.has("count") && object.get("count").isJsonPrimitive()) {
+                try {
+                    stack.setCount(Math.max(1, object.get("count").getAsInt()));
+                } catch (RuntimeException ignored) {
                 }
             }
-            this.configuredItems.add(stack.copy());
         }
+        return stack.copy();
     }
 
     private void ensureWholePages() {
@@ -236,6 +269,7 @@ public final class PackageRewardEditorScreen extends Screen {
                 this.configuredItems.set(i, ItemStack.EMPTY);
             }
             this.selectedSlot = -1;
+            updatePageButtons();
             return;
         }
 
@@ -274,8 +308,8 @@ public final class PackageRewardEditorScreen extends Screen {
             return;
         }
 
-        JsonArray items = serializeItems();
-        if (items == null) {
+        JsonArray packages = serializePackages();
+        if (packages == null) {
             this.validationError = Component.translatable("questlog_envelope.editor.package.invalid_items");
             return;
         }
@@ -293,10 +327,13 @@ public final class PackageRewardEditorScreen extends Screen {
             this.rewardEntry.addProperty("title", title);
         }
 
-        if (items.isEmpty()) {
-            this.rewardEntry.remove("items");
+        // Saving with the visual editor migrates old flat `items` definitions to
+        // explicit six-slot package pages while remaining readable by the backend.
+        this.rewardEntry.remove("items");
+        if (packages.size() == 0) {
+            this.rewardEntry.remove("packages");
         } else {
-            this.rewardEntry.add("items", items);
+            this.rewardEntry.add("packages", packages);
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -308,28 +345,53 @@ public final class PackageRewardEditorScreen extends Screen {
     }
 
     @Nullable
-    private JsonArray serializeItems() {
+    private JsonArray serializePackages() {
         if (this.minecraft == null || this.minecraft.level == null) {
             return null;
         }
 
-        JsonArray items = new JsonArray();
-        for (ItemStack stack : this.configuredItems) {
-            if (stack.isEmpty()) {
-                continue;
-            }
-
-            JsonElement encoded = ItemStack.CODEC.encodeStart(
-                    RegistryOps.create(JsonOps.INSTANCE, this.minecraft.level.registryAccess()),
-                    stack
-            ).result().orElse(null);
-
-            if (encoded == null) {
-                return null;
-            }
-            items.add(encoded);
+        boolean hasAnyItem = this.configuredItems.stream().anyMatch(stack -> !stack.isEmpty());
+        if (!hasAnyItem) {
+            return new JsonArray();
         }
-        return items;
+
+        JsonArray packages = new JsonArray();
+        for (int page = 0; page < getPageCount(); page++) {
+            JsonArray pageJson = new JsonArray();
+            int start = page * SLOTS_PER_PACKAGE;
+
+            for (int slot = 0; slot < SLOTS_PER_PACKAGE; slot++) {
+                ItemStack stack = this.configuredItems.get(start + slot);
+                if (stack.isEmpty()) {
+                    pageJson.add(JsonNull.INSTANCE);
+                    continue;
+                }
+
+                JsonElement encoded = ItemStack.CODEC.encodeStart(
+                        RegistryOps.create(JsonOps.INSTANCE, this.minecraft.level.registryAccess()),
+                        stack
+                ).result().orElse(null);
+
+                if (encoded == null) {
+                    return null;
+                }
+                pageJson.add(encoded);
+            }
+
+            // Do not emit entirely empty extra pages. Empty positions inside a real
+            // page remain as JSON null so slot placement is preserved exactly.
+            boolean pageHasItem = false;
+            for (JsonElement element : pageJson) {
+                if (!element.isJsonNull()) {
+                    pageHasItem = true;
+                    break;
+                }
+            }
+            if (pageHasItem) {
+                packages.add(pageJson);
+            }
+        }
+        return packages;
     }
 
     private String getString(String key, String fallback) {
