@@ -16,51 +16,48 @@ See [`SYNTHESIS.md`](SYNTHESIS.md) for the architecture and analysis of both ups
 
 The compatibility types are registered through Questlog's public objective/reward registries, so they are available directly from Questlog's in-game quest editor.
 
+The editor keeps the real IDs (`questlog_envelope:letter`, `questlog_envelope:package`, `questlog_envelope:mail_received`) internally, but displays short localized names so they fit Questlog's narrow type picker.
+
 ### Make a quest unlock when its mail arrives
 
 1. Open/create the destination quest in Questlog's editor.
 2. Open **Prerequisites**.
-3. Add the **Mail Received** type (`questlog_envelope:mail_received`).
-4. Leave **Letter/package quest marker** empty to use the current quest ID automatically, or select another Quest ID.
+3. Add **Mail Received / Courrier reçu** (`questlog_envelope:mail_received`).
+4. Leave the letter/package quest marker empty to use the current quest ID automatically, or select another Quest ID.
 5. Leave the required amount at `1` for a normal quest delivery.
 
 ### Send a quest letter from another quest
 
 1. Open the source quest in Questlog's editor.
 2. Open **Rewards**.
-3. Add **Letter** (`questlog_envelope:letter`).
+3. Add **Envelope Letter / Lettre Envelope** (`questlog_envelope:letter`).
 4. Use **Quest granted by letter** to select the destination Quest ID. This field uses Questlog's native Quest-ID autocomplete.
 5. Optionally set the reward **Name** and **Icon** as usual in Questlog.
-6. Press **Envelope Letter Options...** to configure:
-   - sender service (blank uses Envelope's mail service);
-   - physical letter title;
-   - physical letter body;
-   - whether the reward is auto-claimed.
-7. Press **Done**, then save the quest normally in Questlog.
+6. Press **Envelope Letter Options...**.
+7. The body is edited on Envelope's own letter-and-quill paper using Envelope's native `TextBox`, so wrapping, formatting controls and available writing area match a normal in-game letter.
+8. The side panel configures sender service, physical letter title and auto-claim.
 
 ### Send a quest package
 
-1. Add **Package** (`questlog_envelope:package`) to a quest's rewards.
+1. Add **Envelope Package / Colis Envelope** (`questlog_envelope:package`) to a quest's rewards.
 2. Optionally select **Quest granted by package**.
 3. Press **Envelope Package Options...**.
-4. Configure the sender, package title, auto-claim setting and package contents.
-5. Enter one item per line using `item [count]`, for example:
+4. The editor shows Envelope's native six-slot package layout plus the player's current inventory.
+5. Select a package slot, then left-click an inventory item to copy its complete stack into the reward. Right-click an inventory item copies one item. The real inventory is never modified.
+6. Right-click a configured package slot to clear it.
+7. Use **Add package** to create another physical six-slot package and the arrow buttons to move between packages.
 
-```text
-minecraft:bread 16
-minecraft:iron_ingot 8
-minecraft:diamond
-```
-
-A full ItemStack JSON object can also be supplied on a line when custom components are needed. Envelope packages hold six slots; when the configured contents require more room, the addon uses Envelope's native package splitting and sends as many packages as required.
+Each editor page corresponds to one real Envelope package. The saved `packages` format preserves all six slot positions, including empty slots. Old quest definitions using a flat `items` array remain supported and are migrated to explicit package pages when saved through the new editor.
 
 The Envelope-specific editors work on Questlog's temporary reward entry, so Questlog's normal **Cancel** behavior remains available.
 
 ## Delivery behavior
 
-When the player has a default Envelope mailbox, letters and packages use Envelope's normal service-delivery flow.
+Letters keep Envelope's normal service-delivery timing when the player has a default mailbox.
 
-When the player has **no mailbox linked to their PlayerAddress**, the addon switches only its own reward mail to a direct-delivery fallback: an Envelope service pigeon appears near the player, approaches them and drops the delivered letter/package at their position instead of returning it as `recipient not found`.
+Quest reward **packages use express mailbox delivery**: when a default mailbox exists, the addon creates a real Envelope service pigeon near the recipient side and starts it directly in the mailbox-approach phase. The pigeon is still visible and performs the physical drop-off, but the long simulated trip from the postal service/hub is skipped.
+
+When the player has **no mailbox linked to their PlayerAddress**, the addon switches only its own reward mail to a direct-delivery fallback: in the Overworld, an Envelope service pigeon appears near the player, approaches them and drops the delivered letter/package at their position instead of returning it as `recipient not found`. Outside the Overworld, where Envelope's `MailService` does not operate, the reward is dropped directly and safely.
 
 A configured sender service is resolved safely. If its resource ID is syntactically valid but no longer registered, the addon logs a warning and falls back to Envelope's normal mail-service address. Envelope routing errors also no longer leave Questlog's **Collect Reward** action permanently unclaimed.
 
@@ -102,25 +99,41 @@ If `quest` is omitted from `mail_received`, the parent Questlog quest ID is used
 }
 ```
 
-## Send a quest package as a reward
+## Send quest packages as a reward
+
+The visual editor writes explicit six-slot pages. `null` means an empty slot:
 
 ```json
 {
   "type": "questlog_envelope:package",
   "sender": "envelope:mail_service",
   "title": "Expedition supplies",
-  "items": [
-    { "item": "minecraft:bread", "count": 16 },
-    { "item": "minecraft:iron_ingot", "count": 8 }
+  "packages": [
+    [
+      { "id": "minecraft:bread", "count": 16 },
+      null,
+      { "id": "minecraft:iron_ingot", "count": 8 },
+      null,
+      null,
+      null
+    ],
+    [
+      { "id": "minecraft:diamond", "count": 2 },
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
   ],
   "grants_quest": "example:next_assignment",
   "auto_claim": true
 }
 ```
 
-For deliveries that contain `grants_quest`, the quest marker is stored on the Envelope mail stack and consumed by the `mail_received` prerequisite when the delivery succeeds. If a package reward is split into multiple Envelope packages, the marker is placed only on the first package so one reward does not advance the prerequisite multiple times.
+Legacy definitions with `"items": [...]` are still accepted. For deliveries that contain `grants_quest`, the quest marker is placed only on the first physical package so one reward does not advance `mail_received` multiple times.
 
-Quest-mail markers are persisted in world `SavedData`. If marked mail reaches a mailbox while the player is offline, the marker remains pending and is applied after Questlog finishes loading/deserializing that player's quests on the next login.
+Quest-mail markers are persisted in Overworld `SavedData`. If marked mail reaches a mailbox while the player is offline, the marker remains pending and is applied after Questlog finishes loading/deserializing that player's quests on the next login.
 
 This enables narrative chains such as:
 
@@ -143,12 +156,16 @@ Implemented on `dev/initial-integration`:
 - mailbox delivery observation and offline quest-marker persistence;
 - replay of pending unlocks after Questlog player data is loaded;
 - `questlog_envelope:letter` reward;
-- `questlog_envelope:package` reward with native Envelope package splitting;
+- `questlog_envelope:package` with explicit six-slot physical package pages and legacy `items` compatibility;
+- express service-pigeon delivery for quest packages sent to a registered mailbox;
 - configurable sender service with safe fallback to Envelope's mail service;
 - direct service-pigeon delivery when a player has no default mailbox;
 - `grants_quest` support for letters and packages;
 - Questlog in-game editor integration for compatibility objectives/rewards;
-- dedicated Envelope letter/package option screens with English/French translations;
+- native Envelope-style letter editor with formatting preview;
+- visual package editor with inventory stack copying and multiple package pages;
+- short localized type labels in Questlog's type picker;
+- English/French translations;
 - Gradle CI definition.
 
 Next steps:
