@@ -25,14 +25,19 @@ public final class PackageReward extends Reward {
     @Nullable private final ResourceLocation senderId;
     @Nullable private final ResourceLocation grantsQuestId;
     private final String title;
-    private final JsonArray itemDefinitions;
+    private final JsonArray packageDefinitions;
+    private final JsonArray legacyItemDefinitions;
 
     public PackageReward(JsonObject definition) {
         super(definition);
         senderId = getOptionalId(definition, "sender");
         grantsQuestId = getOptionalId(definition, "grants_quest");
         title = definition.has("title") ? definition.get("title").getAsString() : "Package";
-        itemDefinitions = definition.has("items") && definition.get("items").isJsonArray()
+
+        packageDefinitions = definition.has("packages") && definition.get("packages").isJsonArray()
+                ? definition.getAsJsonArray("packages").deepCopy()
+                : new JsonArray();
+        legacyItemDefinitions = definition.has("items") && definition.get("items").isJsonArray()
                 ? definition.getAsJsonArray("items").deepCopy()
                 : new JsonArray();
     }
@@ -40,23 +45,18 @@ public final class PackageReward extends Reward {
     @Override
     public void applyReward(ServerPlayer player) {
         try {
-            List<ItemStack> contents = parseContents(player);
-            List<ItemStack> packages;
-
-            if (contents.isEmpty()) {
+            List<ItemStack> packages = buildPackages(player);
+            if (packages.isEmpty()) {
                 packages = List.of(Mail.createPackage(PackageContents.EMPTY)
                         .set(DataComponents.ITEM_NAME, Component.literal(title))
                         .get());
-            } else {
-                packages = Mail.createPackages(contents, builder ->
-                        builder.set(DataComponents.ITEM_NAME, Component.literal(title)));
             }
 
             for (int index = 0; index < packages.size(); index++) {
                 ItemStack packageStack = packages.get(index);
 
                 // One quest reward should progress mail_received once, even when
-                // Envelope had to split the contents across several packages.
+                // several physical packages are configured.
                 if (index == 0 && grantsQuestId != null) {
                     QuestMailMarker.set(packageStack, grantsQuestId);
                 }
@@ -90,31 +90,78 @@ public final class PackageReward extends Reward {
         }
     }
 
-    private List<ItemStack> parseContents(ServerPlayer player) {
-        List<ItemStack> items = new ArrayList<>();
+    private List<ItemStack> buildPackages(ServerPlayer player) {
+        if (!packageDefinitions.isEmpty()) {
+            List<ItemStack> packages = new ArrayList<>();
 
-        for (JsonElement definition : itemDefinitions) {
-            ItemStack stack = ItemReward.parseItemStack(definition, player.level().registryAccess());
-            if (stack.isEmpty()) {
-                Envelope.LOGGER.warn("Skipping invalid Questlog package item: {}", definition);
-                continue;
-            }
-
-            if (definition.isJsonObject()) {
-                JsonObject object = definition.getAsJsonObject();
-                if (object.has("count") && object.get("count").isJsonPrimitive()) {
-                    try {
-                        stack.setCount(Math.max(1, object.get("count").getAsInt()));
-                    } catch (RuntimeException ignored) {
-                        // Keep the count parsed by ItemStack/Questlog.
-                    }
+            for (JsonElement pageElement : packageDefinitions) {
+                if (!pageElement.isJsonArray()) {
+                    Envelope.LOGGER.warn("Skipping invalid Questlog package page: {}", pageElement);
+                    continue;
                 }
+
+                JsonArray page = pageElement.getAsJsonArray();
+                List<ItemStack> pageItems = new ArrayList<>();
+                int slots = Math.min(page.size(), PackageContents.SLOTS);
+
+                for (int slot = 0; slot < slots; slot++) {
+                    JsonElement definition = page.get(slot);
+                    ItemStack stack = parseStack(player, definition);
+                    pageItems.add(stack);
+                }
+
+                while (pageItems.size() < PackageContents.SLOTS) {
+                    pageItems.add(ItemStack.EMPTY);
+                }
+
+                packages.add(Mail.createPackage(new PackageContents(pageItems))
+                        .set(DataComponents.ITEM_NAME, Component.literal(title))
+                        .get());
             }
 
-            items.add(stack);
+            return packages;
         }
 
-        return items;
+        // Backward compatibility for quests created before the visual package editor.
+        List<ItemStack> contents = new ArrayList<>();
+        for (JsonElement definition : legacyItemDefinitions) {
+            ItemStack stack = parseStack(player, definition);
+            if (!stack.isEmpty()) {
+                contents.add(stack);
+            }
+        }
+
+        if (contents.isEmpty()) {
+            return List.of();
+        }
+
+        return Mail.createPackages(contents, builder ->
+                builder.set(DataComponents.ITEM_NAME, Component.literal(title)));
+    }
+
+    private ItemStack parseStack(ServerPlayer player, JsonElement definition) {
+        if (definition == null || definition.isJsonNull()) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack stack = ItemReward.parseItemStack(definition, player.level().registryAccess());
+        if (stack.isEmpty()) {
+            Envelope.LOGGER.warn("Skipping invalid Questlog package item: {}", definition);
+            return ItemStack.EMPTY;
+        }
+
+        if (definition.isJsonObject()) {
+            JsonObject object = definition.getAsJsonObject();
+            if (object.has("count") && object.get("count").isJsonPrimitive()) {
+                try {
+                    stack.setCount(Math.max(1, object.get("count").getAsInt()));
+                } catch (RuntimeException ignored) {
+                    // Keep the count parsed by ItemStack/Questlog.
+                }
+            }
+        }
+
+        return stack;
     }
 
     private static @Nullable ResourceLocation getOptionalId(JsonObject definition, String key) {
