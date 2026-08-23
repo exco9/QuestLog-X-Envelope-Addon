@@ -1,6 +1,11 @@
 {
+  "questlog_envelope.editor.type.letter": "Lettre Envelope",
+  "questlog_envelope.editor.type.package": "Colis Envelope",
+  "questlog_envelope.editor.type.mail_received": "Courrier reçu",
+
   "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
   "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
+  "questlog_envelope.editor.letter.settings": "Réglages de récompense",
   "questlog_envelope.editor.letter.sender": "Service expéditeur (optionnel)",
   "questlog_envelope.editor.letter.sender_hint": "Vide = service postal Envelope",
   "questlog_envelope.editor.letter.letter_title": "Titre de la lettre",
@@ -10,13 +15,19 @@
 
   "questlog_envelope.editor.package.options": "Options de colis Envelope...",
   "questlog_envelope.editor.package.title": "Options de colis Envelope",
+  "questlog_envelope.editor.package.settings": "Réglages de récompense",
   "questlog_envelope.editor.package.sender": "Service expéditeur (optionnel)",
   "questlog_envelope.editor.package.sender_hint": "Vide = service postal Envelope",
   "questlog_envelope.editor.package.package_title": "Titre du colis",
-  "questlog_envelope.editor.package.items": "Contenu (une ligne : objet [quantité])",
+  "questlog_envelope.editor.package.items": "Contenu",
   "questlog_envelope.editor.package.auto_claim": "Récompense automatique : %s",
   "questlog_envelope.editor.package.invalid_sender": "Identifiant du service expéditeur invalide",
-  "questlog_envelope.editor.package.invalid_items": "Contenu invalide. Utilisez objet [quantité] ou du JSON ItemStack.",
+  "questlog_envelope.editor.package.invalid_items": "Un ou plusieurs objets du colis n'ont pas pu être enregistrés.",
+  "questlog_envelope.editor.package.cannot_package": "Cet objet ne peut pas être placé dans un colis Envelope.",
+  "questlog_envelope.editor.package.page": "Colis %s / %s",
+  "questlog_envelope.editor.package.add_package": "+ Ajouter un colis",
+  "questlog_envelope.editor.package.remove_package": "Supprimer le colis",
+  "questlog_envelope.editor.package.copy_hint": "Sélectionnez un slot du colis puis cliquez sur un objet de l'inventaire",
 
   "questlog.reward.default.questlog_envelope.letter": "Lettre",
   "questlog.reward.default.questlog_envelope.package": "Colis",
