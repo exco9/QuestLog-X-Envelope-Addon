@@ -31,13 +31,25 @@ public final class QuestMailDelivery {
     private QuestMailDelivery() {
     }
 
-    /**
-     * Uses normal Envelope service delivery when the player has a default mailbox.
-     * Without a mailbox, starts a visible service pigeon directly near the player
-     * when they are in the Overworld. Envelope's mail service only operates there;
-     * in other dimensions we safely fall back to an immediate item drop.
-     */
+    /** Uses Envelope's normal travel time when a mailbox is available. */
     public static void dispatch(ServerPlayer player, ItemStack mail, @Nullable ResourceLocation senderId) {
+        dispatch(player, mail, senderId, false);
+    }
+
+    /**
+     * Dispatches Questlog reward mail through Envelope.
+     *
+     * @param expressMailbox when true and the player has a mailbox, a real service
+     *                       pigeon is spawned near the mailbox and starts directly
+     *                       in the approach phase. This keeps the visible delivery
+     *                       while avoiding the long background trip from the service.
+     */
+    public static void dispatch(
+            ServerPlayer player,
+            ItemStack mail,
+            @Nullable ResourceLocation senderId,
+            boolean expressMailbox
+    ) {
         ServerLevel playerLevel = player.serverLevel();
         ServerLevel mailLevel = player.getServer().overworld();
         MailService service = MailService.of(mailLevel);
@@ -48,11 +60,15 @@ public final class QuestMailDelivery {
         Mail.setSender(mail, sender);
 
         if (service.getPlayerDefaultAddress(recipient).isPresent()) {
-            service.getDeliveryManager().startService(Delivery.draft()
-                    .deliver(mail)
-                    .from(sender)
-                    .to(recipient)
-                    .owner(player));
+            if (expressMailbox) {
+                startExpressMailboxDelivery(service, player, mail, sender, recipient);
+            } else {
+                service.getDeliveryManager().startService(Delivery.draft()
+                        .deliver(mail)
+                        .from(sender)
+                        .to(recipient)
+                        .owner(player));
+            }
             return;
         }
 
@@ -66,6 +82,22 @@ public final class QuestMailDelivery {
                 player.getScoreboardName()
         );
         dropImmediately(player, mail);
+    }
+
+    /** Starts a service pigeon close to the registered mailbox instead of simulating the full route. */
+    private static void startExpressMailboxDelivery(
+            MailService service,
+            ServerPlayer player,
+            ItemStack mail,
+            Address sender,
+            PlayerAddress recipient
+    ) {
+        ServerLevel level = service.getLevel();
+        DeliveryRoute route = DeliveryRoute.build(level, sender, recipient);
+        BlockPos fallbackPos = route.getRecipientPos().orElse(player.blockPosition());
+
+        Mail.writeToLog(mail, DeliveryRecord.sentFrom(sender));
+        startVisibleApproachDelivery(service, player, mail, sender, recipient, route, fallbackPos);
     }
 
     private static void startDirectPlayerDelivery(
@@ -95,6 +127,19 @@ public final class QuestMailDelivery {
 
         QuestMailMarker.markDirectPlayerDrop(mail);
         Mail.writeToLog(mail, DeliveryRecord.sentFrom(sender));
+        startVisibleApproachDelivery(service, player, mail, sender, recipient, route, recipientPos);
+    }
+
+    private static void startVisibleApproachDelivery(
+            MailService service,
+            ServerPlayer player,
+            ItemStack mail,
+            Address sender,
+            PlayerAddress recipient,
+            DeliveryRoute route,
+            BlockPos fallbackSpawnTarget
+    ) {
+        ServerLevel level = service.getLevel();
 
         service.getDeliveryManager().start(
                 Delivery.draft()
@@ -102,14 +147,15 @@ public final class QuestMailDelivery {
                         .from(sender)
                         .to(recipient)
                         .owner(player)
-                        // Skip Envelope's hub recipient check: it intentionally rejects
-                        // PlayerAddress without a default mailbox.
+                        // The route is already known and the courier is spawned on
+                        // the recipient side, so skip the long service/hub travel.
                         .startAtPhase(DeliveryPhase.APPROACHING_RECIPIENT),
                 delivery -> {
                     delivery.setRoute(route);
 
                     Pigeon pigeon = Pigeon.createService(level);
-                    BlockPos spawnPos = route.getRecipientAscendPos().orElseGet(() -> recipientPos.above(8));
+                    BlockPos spawnPos = route.getRecipientAscendPos()
+                            .orElseGet(() -> fallbackSpawnTarget.above(8));
                     pigeon.moveTo(
                             spawnPos.getX() + 0.5,
                             spawnPos.getY() + 0.5,
@@ -120,7 +166,7 @@ public final class QuestMailDelivery {
                     pigeon.startDelivery(delivery);
 
                     if (!level.addFreshEntity(pigeon)) {
-                        throw new IllegalStateException("Failed to spawn direct Envelope service pigeon");
+                        throw new IllegalStateException("Failed to spawn Envelope service pigeon");
                     }
                     return pigeon;
                 }
