@@ -91,7 +91,7 @@ public final class PackageReward extends Reward {
     }
 
     private List<ItemStack> buildPackages(ServerPlayer player) {
-        if (!packageDefinitions.isEmpty()) {
+        if (packageDefinitions.size() > 0) {
             List<ItemStack> packages = new ArrayList<>();
 
             for (JsonElement pageElement : packageDefinitions) {
