@@ -3,26 +3,57 @@ package io.github.exco9.questlogenvelope.client;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
+import io.github.mortuusars.envelope.client.gui.screen.PackageScreen;
+import io.github.mortuusars.envelope.world.item.component.PackageContents;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import org.infernalstudios.questlog.core.quests.rewards.ItemReward;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** Editor for questlog_envelope:package reward-specific fields. */
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Visual editor for questlog_envelope:package.
+ *
+ * Each page represents one native Envelope package (six slots). Clicking an
+ * inventory item copies its full stack into the selected package slot without
+ * removing or changing the player's real inventory. Right-click copies one.
+ */
 public final class PackageRewardEditorScreen extends Screen {
+    private static final int SLOTS_PER_PACKAGE = PackageContents.SLOTS;
+
     private final Screen parent;
     private final JsonObject rewardEntry;
+    private final List<ItemStack> configuredItems = new ArrayList<>();
 
     private EditBox senderBox;
     private EditBox packageTitleBox;
-    private MultiLineEditBox itemsBox;
+    private Button autoClaimButton;
+    private Button previousPageButton;
+    private Button nextPageButton;
+    private Button addPageButton;
+    private Button removePageButton;
+
     private boolean autoClaim;
+    private boolean contentsLoaded;
+    private int currentPage;
+    private int selectedSlot = -1;
+
+    private int packageLeft;
+    private int packageTop;
+    private int panelX;
+    private int panelY;
+    private int panelWidth;
 
     @Nullable
     private Component validationError;
@@ -36,15 +67,33 @@ public final class PackageRewardEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        int panelWidth = Math.min(360, this.width - 30);
-        int x = (this.width - panelWidth) / 2;
-        int y = Math.max(28, (this.height - 238) / 2);
+        if (!this.contentsLoaded) {
+            loadContents();
+            this.contentsLoaded = true;
+        }
+        ensureWholePages();
+
+        int packageWidth = 176;
+        int packageHeight = 178;
+        this.panelWidth = 170;
+        int gap = 12;
+        int totalWidth = packageWidth + gap + this.panelWidth;
+
+        this.packageLeft = Math.max(4, (this.width - totalWidth) / 2);
+        this.packageTop = Math.max(8, (this.height - packageHeight) / 2);
+        this.panelX = this.packageLeft + packageWidth + gap;
+        this.panelY = this.packageTop;
+
+        if (this.panelX + this.panelWidth > this.width - 4) {
+            this.panelX = Math.max(4, this.width - this.panelWidth - 4);
+            this.packageLeft = 4;
+        }
 
         this.senderBox = new EditBox(
                 this.font,
-                x,
-                y + 34,
-                panelWidth,
+                this.panelX,
+                this.panelY + 32,
+                this.panelWidth,
                 18,
                 Component.translatable("questlog_envelope.editor.package.sender")
         );
@@ -55,9 +104,9 @@ public final class PackageRewardEditorScreen extends Screen {
 
         this.packageTitleBox = new EditBox(
                 this.font,
-                x,
-                y + 76,
-                panelWidth,
+                this.panelX,
+                this.panelY + 73,
+                this.panelWidth,
                 18,
                 Component.translatable("questlog_envelope.editor.package.package_title")
         );
@@ -65,34 +114,98 @@ public final class PackageRewardEditorScreen extends Screen {
         this.packageTitleBox.setValue(getString("title", "Package"));
         this.addRenderableWidget(this.packageTitleBox);
 
-        this.itemsBox = new MultiLineEditBox(
-                this.font,
-                x,
-                y + 118,
-                panelWidth,
-                58,
-                Component.translatable("questlog_envelope.editor.package.items"),
-                Component.empty()
-        );
-        this.itemsBox.setCharacterLimit(8192);
-        this.itemsBox.setValue(itemsToText());
-        this.addRenderableWidget(this.itemsBox);
-
-        Button autoClaimButton = Button.builder(autoClaimLabel(), button -> {
+        this.autoClaimButton = this.addRenderableWidget(Button.builder(autoClaimLabel(), button -> {
             this.autoClaim = !this.autoClaim;
             button.setMessage(autoClaimLabel());
-        }).bounds(x, y + 184, panelWidth, 18).build();
-        this.addRenderableWidget(autoClaimButton);
+        }).bounds(this.panelX, this.panelY + 103, this.panelWidth, 18).build());
+
+        int smallButtonWidth = 36;
+        this.previousPageButton = this.addRenderableWidget(Button.builder(
+                Component.literal("<"),
+                button -> changePage(-1)
+        ).bounds(this.packageLeft + 7, this.packageTop + 7, smallButtonWidth, 18).build());
+
+        this.nextPageButton = this.addRenderableWidget(Button.builder(
+                Component.literal(">"),
+                button -> changePage(1)
+        ).bounds(this.packageLeft + 133, this.packageTop + 7, smallButtonWidth, 18).build());
+
+        this.addPageButton = this.addRenderableWidget(Button.builder(
+                Component.translatable("questlog_envelope.editor.package.add_package"),
+                button -> addPackagePage()
+        ).bounds(this.panelX, this.panelY + 129, this.panelWidth, 18).build());
+
+        this.removePageButton = this.addRenderableWidget(Button.builder(
+                Component.translatable("questlog_envelope.editor.package.remove_package"),
+                button -> removeCurrentPackagePage()
+        ).bounds(this.panelX, this.panelY + 151, this.panelWidth, 18).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.cancel"),
                 button -> this.onClose()
-        ).bounds(x, y + 210, (panelWidth - 6) / 2, 20).build());
+        ).bounds(this.panelX, this.panelY + 174, (this.panelWidth - 6) / 2, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 button -> saveAndClose()
-        ).bounds(x + (panelWidth + 6) / 2, y + 210, (panelWidth - 6) / 2, 20).build());
+        ).bounds(
+                this.panelX + (this.panelWidth + 6) / 2,
+                this.panelY + 174,
+                (this.panelWidth - 6) / 2,
+                20
+        ).build());
+
+        updatePageButtons();
+    }
+
+    private void loadContents() {
+        this.configuredItems.clear();
+        if (this.minecraft == null || this.minecraft.level == null) {
+            return;
+        }
+        if (!this.rewardEntry.has("items") || !this.rewardEntry.get("items").isJsonArray()) {
+            return;
+        }
+
+        for (JsonElement definition : this.rewardEntry.getAsJsonArray("items")) {
+            ItemStack stack = ItemReward.parseItemStack(definition, this.minecraft.level.registryAccess());
+            if (stack.isEmpty()) {
+                continue;
+            }
+
+            if (definition.isJsonObject()) {
+                JsonObject object = definition.getAsJsonObject();
+                if (object.has("count") && object.get("count").isJsonPrimitive()) {
+                    try {
+                        stack.setCount(Math.max(1, object.get("count").getAsInt()));
+                    } catch (RuntimeException ignored) {
+                    }
+                }
+            }
+            this.configuredItems.add(stack.copy());
+        }
+    }
+
+    private void ensureWholePages() {
+        if (this.configuredItems.isEmpty()) {
+            for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+                this.configuredItems.add(ItemStack.EMPTY);
+            }
+            return;
+        }
+
+        while (this.configuredItems.size() % SLOTS_PER_PACKAGE != 0) {
+            this.configuredItems.add(ItemStack.EMPTY);
+        }
+        this.currentPage = Math.max(0, Math.min(this.currentPage, getPageCount() - 1));
+    }
+
+    private int getPageCount() {
+        return Math.max(1, this.configuredItems.size() / SLOTS_PER_PACKAGE);
+    }
+
+    private int pageStart() {
+        return this.currentPage * SLOTS_PER_PACKAGE;
     }
 
     private Component autoClaimLabel() {
@@ -102,6 +215,58 @@ public final class PackageRewardEditorScreen extends Screen {
         );
     }
 
+    private void changePage(int delta) {
+        this.currentPage = Math.max(0, Math.min(this.currentPage + delta, getPageCount() - 1));
+        this.selectedSlot = -1;
+        updatePageButtons();
+    }
+
+    private void addPackagePage() {
+        for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+            this.configuredItems.add(ItemStack.EMPTY);
+        }
+        this.currentPage = getPageCount() - 1;
+        this.selectedSlot = -1;
+        updatePageButtons();
+    }
+
+    private void removeCurrentPackagePage() {
+        if (getPageCount() <= 1) {
+            for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+                this.configuredItems.set(i, ItemStack.EMPTY);
+            }
+            this.selectedSlot = -1;
+            return;
+        }
+
+        int start = pageStart();
+        for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+            this.configuredItems.remove(start);
+        }
+        this.currentPage = Math.min(this.currentPage, getPageCount() - 1);
+        this.selectedSlot = -1;
+        updatePageButtons();
+    }
+
+    private void updatePageButtons() {
+        if (this.previousPageButton == null) {
+            return;
+        }
+        this.previousPageButton.active = this.currentPage > 0;
+        this.nextPageButton.active = this.currentPage < getPageCount() - 1;
+        this.removePageButton.active = getPageCount() > 1 || !isCurrentPageEmpty();
+    }
+
+    private boolean isCurrentPageEmpty() {
+        int start = pageStart();
+        for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+            if (!this.configuredItems.get(start + i).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void saveAndClose() {
         String sender = this.senderBox.getValue().trim();
         if (!sender.isEmpty() && ResourceLocation.tryParse(sender) == null) {
@@ -109,7 +274,7 @@ public final class PackageRewardEditorScreen extends Screen {
             return;
         }
 
-        JsonArray items = parseItems(this.itemsBox.getValue());
+        JsonArray items = serializeItems();
         if (items == null) {
             this.validationError = Component.translatable("questlog_envelope.editor.package.invalid_items");
             return;
@@ -128,7 +293,7 @@ public final class PackageRewardEditorScreen extends Screen {
             this.rewardEntry.addProperty("title", title);
         }
 
-        if (items.size() == 0) {
+        if (items.isEmpty()) {
             this.rewardEntry.remove("items");
         } else {
             this.rewardEntry.add("items", items);
@@ -143,100 +308,28 @@ public final class PackageRewardEditorScreen extends Screen {
     }
 
     @Nullable
-    private static JsonArray parseItems(String text) {
-        JsonArray result = new JsonArray();
+    private JsonArray serializeItems() {
+        if (this.minecraft == null || this.minecraft.level == null) {
+            return null;
+        }
 
-        for (String rawLine : text.split("\\R")) {
-            String line = rawLine.trim();
-            if (line.isEmpty()) {
+        JsonArray items = new JsonArray();
+        for (ItemStack stack : this.configuredItems) {
+            if (stack.isEmpty()) {
                 continue;
             }
 
-            try {
-                if (line.startsWith("{")) {
-                    JsonElement parsed = JsonParser.parseString(line);
-                    if (!parsed.isJsonObject()) {
-                        return null;
-                    }
-                    result.add(parsed.getAsJsonObject());
-                    continue;
-                }
+            JsonElement encoded = ItemStack.CODEC.encodeStart(
+                    RegistryOps.create(JsonOps.INSTANCE, this.minecraft.level.registryAccess()),
+                    stack
+            ).result().orElse(null);
 
-                String[] parts = line.split("\\s+");
-                if (parts.length < 1 || parts.length > 2 || ResourceLocation.tryParse(parts[0]) == null) {
-                    return null;
-                }
-
-                int count = 1;
-                if (parts.length == 2) {
-                    String countText = parts[1];
-                    if (countText.startsWith("x") || countText.startsWith("X")) {
-                        countText = countText.substring(1);
-                    }
-                    count = Integer.parseInt(countText);
-                    if (count <= 0) {
-                        return null;
-                    }
-                }
-
-                JsonObject item = new JsonObject();
-                item.addProperty("item", parts[0]);
-                if (count != 1) {
-                    item.addProperty("count", count);
-                }
-                result.add(item);
-            } catch (RuntimeException exception) {
+            if (encoded == null) {
                 return null;
             }
+            items.add(encoded);
         }
-
-        return result;
-    }
-
-    private String itemsToText() {
-        if (!this.rewardEntry.has("items") || !this.rewardEntry.get("items").isJsonArray()) {
-            return "";
-        }
-
-        StringBuilder text = new StringBuilder();
-        for (JsonElement element : this.rewardEntry.getAsJsonArray("items")) {
-            if (text.length() > 0) {
-                text.append('\n');
-            }
-
-            if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
-                text.append(element.getAsString());
-                continue;
-            }
-
-            if (element.isJsonObject()) {
-                JsonObject object = element.getAsJsonObject();
-                String id = null;
-                if (object.has("item") && object.get("item").isJsonPrimitive()) {
-                    id = object.get("item").getAsString();
-                } else if (object.has("id") && object.get("id").isJsonPrimitive()) {
-                    id = object.get("id").getAsString();
-                }
-
-                boolean simple = id != null
-                        && object.entrySet().stream().allMatch(entry ->
-                        entry.getKey().equals("item") || entry.getKey().equals("id") || entry.getKey().equals("count"));
-
-                if (simple) {
-                    text.append(id);
-                    if (object.has("count") && object.get("count").isJsonPrimitive()) {
-                        int count = object.get("count").getAsInt();
-                        if (count != 1) {
-                            text.append(' ').append(count);
-                        }
-                    }
-                    continue;
-                }
-            }
-
-            text.append(element);
-        }
-        return text.toString();
+        return items;
     }
 
     private String getString(String key, String fallback) {
@@ -251,20 +344,249 @@ public final class PackageRewardEditorScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int packageSlot = getPackageSlotAt(mouseX, mouseY);
+        if (packageSlot >= 0) {
+            int absoluteSlot = pageStart() + packageSlot;
+            if (button == 1) {
+                this.configuredItems.set(absoluteSlot, ItemStack.EMPTY);
+                if (this.selectedSlot == absoluteSlot) {
+                    this.selectedSlot = -1;
+                }
+                updatePageButtons();
+            } else if (button == 0) {
+                this.selectedSlot = absoluteSlot;
+            }
+            return true;
+        }
+
+        int inventorySlot = getInventorySlotAt(mouseX, mouseY);
+        if (inventorySlot >= 0 && (button == 0 || button == 1)) {
+            copyInventoryStack(inventorySlot, button == 1);
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void copyInventoryStack(int inventorySlot, boolean singleItem) {
+        if (this.minecraft == null || this.minecraft.player == null) {
+            return;
+        }
+
+        ItemStack source = this.minecraft.player.getInventory().getItem(inventorySlot);
+        if (source.isEmpty()) {
+            return;
+        }
+        if (!PackageContents.canHold(source)) {
+            this.validationError = Component.translatable("questlog_envelope.editor.package.cannot_package");
+            return;
+        }
+
+        int target = this.selectedSlot;
+        if (target < pageStart() || target >= pageStart() + SLOTS_PER_PACKAGE) {
+            target = firstEmptySlotOnCurrentPage();
+        }
+        if (target < 0) {
+            addPackagePage();
+            target = pageStart();
+        }
+
+        ItemStack copy = source.copy();
+        if (singleItem) {
+            copy.setCount(1);
+        }
+        this.configuredItems.set(target, copy);
+        this.selectedSlot = target;
+        this.validationError = null;
+        updatePageButtons();
+    }
+
+    private int firstEmptySlotOnCurrentPage() {
+        int start = pageStart();
+        for (int i = 0; i < SLOTS_PER_PACKAGE; i++) {
+            if (this.configuredItems.get(start + i).isEmpty()) {
+                return start + i;
+            }
+        }
+        return -1;
+    }
+
+    private int getPackageSlotAt(double mouseX, double mouseY) {
+        for (int row = 0; row < 2; row++) {
+            for (int column = 0; column < 3; column++) {
+                int x = this.packageLeft + 62 + column * 18;
+                int y = this.packageTop + 33 + row * 18;
+                if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                    return column + row * 3;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private int getInventorySlotAt(double mouseX, double mouseY) {
+        // Main inventory: indices 9..35.
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 9; column++) {
+                int x = this.packageLeft + 8 + column * 18;
+                int y = this.packageTop + 96 + row * 18;
+                if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                    return 9 + column + row * 9;
+                }
+            }
+        }
+
+        // Hotbar: indices 0..8.
+        for (int column = 0; column < 9; column++) {
+            int x = this.packageLeft + 8 + column * 18;
+            int y = this.packageTop + 154;
+            if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                return column;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        this.renderTransparentBackground(graphics);
+        graphics.blit(PackageScreen.TEXTURE, this.packageLeft, this.packageTop, 0, 0, 176, 178);
+        graphics.fill(
+                this.panelX - 6,
+                this.panelY - 6,
+                this.panelX + this.panelWidth + 6,
+                this.panelY + 202,
+                0xB0101010
+        );
+    }
+
+    @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
+        renderPackageContents(graphics);
+        renderPlayerInventory(graphics);
 
-        int panelWidth = Math.min(360, this.width - 30);
-        int x = (this.width - panelWidth) / 2;
-        int y = Math.max(28, (this.height - 238) / 2);
+        graphics.drawCenteredString(
+                this.font,
+                Component.translatable(
+                        "questlog_envelope.editor.package.page",
+                        this.currentPage + 1,
+                        getPageCount()
+                ),
+                this.packageLeft + 88,
+                this.packageTop + 12,
+                0xFFFFFF
+        );
 
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, y + 4, 0xFFFFFF);
-        graphics.drawString(this.font, Component.translatable("questlog_envelope.editor.package.sender"), x, y + 23, 0xFFFFFF, false);
-        graphics.drawString(this.font, Component.translatable("questlog_envelope.editor.package.package_title"), x, y + 65, 0xFFFFFF, false);
-        graphics.drawString(this.font, Component.translatable("questlog_envelope.editor.package.items"), x, y + 107, 0xFFFFFF, false);
+        graphics.drawCenteredString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.package.settings"),
+                this.panelX + this.panelWidth / 2,
+                this.panelY + 6,
+                0xFFFFFF
+        );
+        graphics.drawString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.package.sender"),
+                this.panelX,
+                this.panelY + 21,
+                0xFFFFFF,
+                false
+        );
+        graphics.drawString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.package.package_title"),
+                this.panelX,
+                this.panelY + 62,
+                0xFFFFFF,
+                false
+        );
+
+        graphics.drawCenteredString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.package.copy_hint"),
+                this.packageLeft + 88,
+                this.packageTop + 79,
+                0xFFB0B0B0
+        );
+
+        ItemStack hovered = getHoveredStack(mouseX, mouseY);
+        if (!hovered.isEmpty()) {
+            graphics.renderTooltip(this.font, hovered, mouseX, mouseY);
+        }
 
         if (this.validationError != null) {
-            graphics.drawCenteredString(this.font, this.validationError, this.width / 2, y + 232, 0xFF5555);
+            graphics.drawCenteredString(
+                    this.font,
+                    this.validationError,
+                    this.panelX + this.panelWidth / 2,
+                    this.panelY + 198,
+                    0xFF5555
+            );
         }
+    }
+
+    private void renderPackageContents(GuiGraphics graphics) {
+        int start = pageStart();
+        for (int localSlot = 0; localSlot < SLOTS_PER_PACKAGE; localSlot++) {
+            int row = localSlot / 3;
+            int column = localSlot % 3;
+            int x = this.packageLeft + 62 + column * 18;
+            int y = this.packageTop + 33 + row * 18;
+            int absoluteSlot = start + localSlot;
+
+            if (absoluteSlot == this.selectedSlot) {
+                graphics.fill(x - 1, y - 1, x + 17, y, 0xFFFFFFFF);
+                graphics.fill(x - 1, y + 16, x + 17, y + 17, 0xFFFFFFFF);
+                graphics.fill(x - 1, y, x, y + 16, 0xFFFFFFFF);
+                graphics.fill(x + 16, y, x + 17, y + 16, 0xFFFFFFFF);
+            }
+
+            renderStack(graphics, this.configuredItems.get(absoluteSlot), x, y);
+        }
+    }
+
+    private void renderPlayerInventory(GuiGraphics graphics) {
+        if (this.minecraft == null || this.minecraft.player == null) {
+            return;
+        }
+        Inventory inventory = this.minecraft.player.getInventory();
+
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 9; column++) {
+                int slot = 9 + column + row * 9;
+                int x = this.packageLeft + 8 + column * 18;
+                int y = this.packageTop + 96 + row * 18;
+                renderStack(graphics, inventory.getItem(slot), x, y);
+            }
+        }
+
+        for (int column = 0; column < 9; column++) {
+            int x = this.packageLeft + 8 + column * 18;
+            int y = this.packageTop + 154;
+            renderStack(graphics, inventory.getItem(column), x, y);
+        }
+    }
+
+    private void renderStack(GuiGraphics graphics, ItemStack stack, int x, int y) {
+        if (stack.isEmpty()) {
+            return;
+        }
+        graphics.renderItem(stack, x, y);
+        graphics.renderItemDecorations(this.font, stack, x, y);
+    }
+
+    private ItemStack getHoveredStack(int mouseX, int mouseY) {
+        int packageSlot = getPackageSlotAt(mouseX, mouseY);
+        if (packageSlot >= 0) {
+            return this.configuredItems.get(pageStart() + packageSlot);
+        }
+
+        int inventorySlot = getInventorySlotAt(mouseX, mouseY);
+        if (inventorySlot >= 0 && this.minecraft != null && this.minecraft.player != null) {
+            return this.minecraft.player.getInventory().getItem(inventorySlot);
+        }
+        return ItemStack.EMPTY;
     }
 }
