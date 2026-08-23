@@ -15,6 +15,14 @@ allprojects {
 
 subprojects {
     apply plugin: 'dev.architectury.loom'
+
+    // Configure Loom immediately after applying it. Architectury may read/finalize
+    // Loom mapping properties during its own plugin application, so this must
+    // happen before applying 'architectury-plugin'.
+    loom {
+        silentMojangMappingsLicense()
+    }
+
     apply plugin: 'architectury-plugin'
     apply plugin: 'maven-publish'
 
@@ -44,13 +52,11 @@ subprojects {
         }
     }
 
-    loom {
-        silentMojangMappingsLicense()
-    }
-
     dependencies {
         minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-        mappings loom.officialMojangMappings()
+        mappings(loom.layered {
+            officialMojangMappings()
+        })
     }
 
     java {
