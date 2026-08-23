@@ -127,7 +127,7 @@ public final class LetterRewardEditorScreen extends Screen {
     @Override
     public void resize(Minecraft minecraft, int width, int height) {
         FormattedString message = this.textBox == null
-                ? FormattedString.EMPTY
+                ? new FormattedString()
                 : this.textBox.getEditor().getText();
         int cursor = this.textBox == null ? 0 : this.textBox.getEditor().getCursorPos();
 
