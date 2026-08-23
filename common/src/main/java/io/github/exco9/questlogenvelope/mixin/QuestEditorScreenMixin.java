@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
@@ -71,6 +72,40 @@ public abstract class QuestEditorScreenMixin extends Screen {
         }).bounds(panel2X + 15, panel2Y + 138, 130, 16).build();
 
         this.addRenderableWidget(options);
+    }
+
+    /**
+     * Questlog strips only the built-in "questlog:" namespace when drawing the
+     * type picker. Keep our real ResourceLocation untouched, but replace the
+     * rendered text with a short localized label so it fits the 130px list.
+     */
+    @Redirect(
+            method = "render",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Ljava/lang/String;replace(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;"
+            ),
+            remap = false
+    )
+    private String questlogEnvelope$shortRenderedTypeName(
+            String value,
+            CharSequence target,
+            CharSequence replacement
+    ) {
+        String normal = value.replace(target, replacement);
+        if (!"questlog:".contentEquals(target) || replacement.length() != 0) {
+            return normal;
+        }
+
+        return switch (value) {
+            case "questlog_envelope:letter" ->
+                    Component.translatable("questlog_envelope.editor.type.letter").getString();
+            case "questlog_envelope:package" ->
+                    Component.translatable("questlog_envelope.editor.type.package").getString();
+            case "questlog_envelope:mail_received" ->
+                    Component.translatable("questlog_envelope.editor.type.mail_received").getString();
+            default -> normal;
+        };
     }
 
     /**
