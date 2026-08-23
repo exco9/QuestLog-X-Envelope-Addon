@@ -62,7 +62,10 @@ public final class PackageReward extends Reward {
                 }
 
                 try {
-                    QuestMailDelivery.dispatch(player, packageStack, senderId);
+                    // Quest reward packages are deliberately express: when a mailbox
+                    // exists, a service pigeon starts near it instead of spending the
+                    // full background travel time crossing the world.
+                    QuestMailDelivery.dispatch(player, packageStack, senderId, true);
                 } catch (RuntimeException exception) {
                     Envelope.LOGGER.error(
                             "Failed to dispatch Questlog package reward for {}. Dropping this package directly instead.",
