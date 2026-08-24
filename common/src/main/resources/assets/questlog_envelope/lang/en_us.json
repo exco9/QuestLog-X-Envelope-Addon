@@ -5,6 +5,8 @@
 
   "questlog_envelope.editor.seal": "Seal: %s",
   "questlog_envelope.editor.seal.none": "None",
+  "questlog_envelope.editor.seal.button": "Seal",
+  "questlog_envelope.editor.seal.title": "Choose Envelope seal",
 
   "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
   "questlog_envelope.editor.letter.title": "Envelope Letter Options",
@@ -22,6 +24,7 @@
   "questlog_envelope.editor.letter.invalid_sender": "Invalid sender service ID",
 
   "questlog_envelope.editor.package.options": "Envelope Package Options...",
+  "questlog_envelope.editor.package.options_short": "Options...",
   "questlog_envelope.editor.package.title": "Envelope Package Options",
   "questlog_envelope.editor.package.settings": "Reward settings",
   "questlog_envelope.editor.package.sender": "Sender service (optional)",
