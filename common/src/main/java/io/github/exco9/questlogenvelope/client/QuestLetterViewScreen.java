@@ -5,7 +5,6 @@ import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
 import io.github.mortuusars.envelope.client.gui.screen.LetterViewScreen;
 import io.github.mortuusars.envelope.world.item.component.LetterContent;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.InteractionHand;
@@ -49,10 +48,9 @@ public final class QuestLetterViewScreen extends LetterViewScreen {
             return;
         }
 
-        // Keep Screen/widget behavior from Envelope, then render only its text
-        // area with our global scale preset.
-        net.minecraft.client.gui.screens.Screen.super.render(guiGraphics, mouseX, mouseY, partialTick);
-
+        // LetterViewScreen has no child widgets. Its super.render() call only
+        // services Screen renderables, so for scaled quest letters we render the
+        // same content directly to avoid drawing the normal-size text underneath.
         final int originX = this.leftPos + 17;
         final int originY = this.topPos + 21;
         int textColor = 0xFF7B593D;
