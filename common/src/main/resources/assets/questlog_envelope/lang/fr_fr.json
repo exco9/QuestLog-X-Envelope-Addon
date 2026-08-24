@@ -2,11 +2,15 @@
   "questlog_envelope.editor.type.letter": "Lettre Envelope",
   "questlog_envelope.editor.type.package": "Colis Envelope",
   "questlog_envelope.editor.type.mail_received": "Courrier reçu",
+  "questlog_envelope.editor.type.mail_sent": "Courrier envoyé",
 
   "questlog_envelope.editor.seal": "Sceau : %s",
   "questlog_envelope.editor.seal.none": "Aucun",
   "questlog_envelope.editor.seal.button": "Sceau",
   "questlog_envelope.editor.seal.title": "Choisir un sceau Envelope",
+  "questlog_envelope.editor.magic_seal": "Sceau magique : %s",
+  "questlog_envelope.editor.magic_seal.hint": "Déclenche la quête liée quand le sceau est brisé",
+  "questlog_envelope.magic_seal.accepted": "Le sceau magique a validé votre participation.",
 
   "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
   "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
@@ -16,10 +20,6 @@
   "questlog_envelope.editor.letter.letter_title": "Titre de la lettre",
   "questlog_envelope.editor.letter.body": "Contenu de la lettre",
   "questlog_envelope.editor.letter.auto_claim": "Récompense automatique : %s",
-  "questlog_envelope.editor.letter.font_size": "Taille du texte : %s",
-  "questlog_envelope.editor.letter.font_size.small": "Petite",
-  "questlog_envelope.editor.letter.font_size.normal": "Normale",
-  "questlog_envelope.editor.letter.font_size.large": "Grande",
   "questlog_envelope.editor.letter.format_hint": "Sélection = B/I/U + couleurs",
   "questlog_envelope.editor.letter.invalid_sender": "Identifiant du service expéditeur invalide",
 
@@ -40,7 +40,22 @@
   "questlog_envelope.editor.package.remove_package": "Supprimer le colis",
   "questlog_envelope.editor.package.copy_hint": "Sélectionnez un slot du colis puis cliquez sur un objet de l'inventaire",
 
+  "questlog_envelope.editor.mail_sent.options": "Filtres du courrier...",
+  "questlog_envelope.editor.mail_sent.title": "Filtres du courrier envoyé",
+  "questlog_envelope.editor.mail_sent.kind": "Type : %s",
+  "questlog_envelope.editor.mail_sent.kind.any": "Lettre ou colis",
+  "questlog_envelope.editor.mail_sent.kind.letter": "Lettre",
+  "questlog_envelope.editor.mail_sent.kind.package": "Colis",
+  "questlog_envelope.editor.mail_sent.text_contains": "Texte devant être contenu",
+  "questlog_envelope.editor.mail_sent.text_hint": "Vide = n'importe quel texte",
+  "questlog_envelope.editor.mail_sent.item": "Item devant être contenu",
+  "questlog_envelope.editor.mail_sent.item_count": "Qté min.",
+  "questlog_envelope.editor.mail_sent.recipient_hint": "L'adresse et le nombre requis se règlent dans l'écran Questlog.",
+  "questlog_envelope.editor.mail_sent.invalid_item": "Identifiant d'item invalide",
+  "questlog_envelope.editor.mail_sent.invalid_count": "Quantité d'item invalide",
+
   "questlog.reward.default.questlog_envelope.letter": "Lettre",
   "questlog.reward.default.questlog_envelope.package": "Colis",
-  "questlog.objective.default.questlog_envelope.mail_received": "Recevoir le courrier de quête"
+  "questlog.objective.default.questlog_envelope.mail_received": "Recevoir le courrier de quête",
+  "questlog.objective.default.questlog_envelope.mail_sent": "Envoyer du courrier"
 }
