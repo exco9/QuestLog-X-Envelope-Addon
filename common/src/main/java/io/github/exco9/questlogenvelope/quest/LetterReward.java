@@ -1,6 +1,7 @@
 package io.github.exco9.questlogenvelope.quest;
 
 import com.google.gson.JsonObject;
+import io.github.exco9.questlogenvelope.mail.QuestMagicSeal;
 import io.github.exco9.questlogenvelope.mail.QuestMailDelivery;
 import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
 import io.github.exco9.questlogenvelope.mail.QuestMailSeal;
@@ -20,6 +21,7 @@ public final class LetterReward extends Reward {
     @Nullable private final ResourceLocation sealSymbolId;
     private final String title;
     private final String text;
+    private final boolean magicSeal;
 
     public LetterReward(JsonObject definition) {
         super(definition);
@@ -28,6 +30,9 @@ public final class LetterReward extends Reward {
         sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Letter";
         text = definition.has("text") ? definition.get("text").getAsString() : "";
+        magicSeal = definition.has("magic_seal")
+                && definition.get("magic_seal").isJsonPrimitive()
+                && definition.get("magic_seal").getAsBoolean();
     }
 
     @Override
@@ -36,11 +41,16 @@ public final class LetterReward extends Reward {
                 .set(DataComponents.ITEM_NAME, Component.literal(title))
                 .get();
 
-        if (grantsQuestId != null) {
+        boolean useMagicSeal = magicSeal && grantsQuestId != null && sealSymbolId != null;
+        if (!useMagicSeal && grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
         }
 
         letter = QuestMailSeal.apply(player, letter, sealSymbolId);
+
+        if (useMagicSeal) {
+            QuestMagicSeal.attach(letter, player, grantsQuestId);
+        }
 
         try {
             QuestMailDelivery.dispatch(player, letter, senderId);
@@ -56,8 +66,6 @@ public final class LetterReward extends Reward {
                 Envelope.LOGGER.error("Failed to drop Questlog letter reward fallback.", fallbackException);
             }
         } finally {
-            // Questlog marks a reward as collected here. Never let an Envelope
-            // routing/service error permanently block the Collect Reward button.
             super.applyReward(player);
         }
     }
