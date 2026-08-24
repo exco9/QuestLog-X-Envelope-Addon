@@ -2,11 +2,15 @@
   "questlog_envelope.editor.type.letter": "Envelope Letter",
   "questlog_envelope.editor.type.package": "Envelope Package",
   "questlog_envelope.editor.type.mail_received": "Mail Received",
+  "questlog_envelope.editor.type.mail_sent": "Mail Sent",
 
   "questlog_envelope.editor.seal": "Seal: %s",
   "questlog_envelope.editor.seal.none": "None",
   "questlog_envelope.editor.seal.button": "Seal",
   "questlog_envelope.editor.seal.title": "Choose Envelope seal",
+  "questlog_envelope.editor.magic_seal": "Magic seal: %s",
+  "questlog_envelope.editor.magic_seal.hint": "Triggers the linked quest when the seal is broken",
+  "questlog_envelope.magic_seal.accepted": "The magic seal confirmed your participation.",
 
   "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
   "questlog_envelope.editor.letter.title": "Envelope Letter Options",
@@ -16,10 +20,6 @@
   "questlog_envelope.editor.letter.letter_title": "Letter title",
   "questlog_envelope.editor.letter.body": "Letter body",
   "questlog_envelope.editor.letter.auto_claim": "Auto-claim: %s",
-  "questlog_envelope.editor.letter.font_size": "Text size: %s",
-  "questlog_envelope.editor.letter.font_size.small": "Small",
-  "questlog_envelope.editor.letter.font_size.normal": "Normal",
-  "questlog_envelope.editor.letter.font_size.large": "Large",
   "questlog_envelope.editor.letter.format_hint": "Select text = B/I/U + colors",
   "questlog_envelope.editor.letter.invalid_sender": "Invalid sender service ID",
 
@@ -40,7 +40,22 @@
   "questlog_envelope.editor.package.remove_package": "Remove package",
   "questlog_envelope.editor.package.copy_hint": "Select a package slot, then click an inventory item",
 
+  "questlog_envelope.editor.mail_sent.options": "Mail filters...",
+  "questlog_envelope.editor.mail_sent.title": "Sent mail filters",
+  "questlog_envelope.editor.mail_sent.kind": "Type: %s",
+  "questlog_envelope.editor.mail_sent.kind.any": "Letter or package",
+  "questlog_envelope.editor.mail_sent.kind.letter": "Letter",
+  "questlog_envelope.editor.mail_sent.kind.package": "Package",
+  "questlog_envelope.editor.mail_sent.text_contains": "Required text",
+  "questlog_envelope.editor.mail_sent.text_hint": "Blank = any text",
+  "questlog_envelope.editor.mail_sent.item": "Required item",
+  "questlog_envelope.editor.mail_sent.item_count": "Min qty",
+  "questlog_envelope.editor.mail_sent.recipient_hint": "Recipient address and required mail count stay in the Questlog screen.",
+  "questlog_envelope.editor.mail_sent.invalid_item": "Invalid item ID",
+  "questlog_envelope.editor.mail_sent.invalid_count": "Invalid item quantity",
+
   "questlog.reward.default.questlog_envelope.letter": "Letter",
   "questlog.reward.default.questlog_envelope.package": "Package",
-  "questlog.objective.default.questlog_envelope.mail_received": "Receive quest mail"
+  "questlog.objective.default.questlog_envelope.mail_received": "Receive quest mail",
+  "questlog.objective.default.questlog_envelope.mail_sent": "Send mail"
 }
