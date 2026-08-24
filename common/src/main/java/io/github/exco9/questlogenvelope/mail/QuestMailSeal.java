@@ -32,7 +32,7 @@ public final class QuestMailSeal {
                 symbolId
         );
 
-        Holder<SealSymbol> symbol = SealSymbol.get(player.registryAccess(), symbolKey).orElse(null);
+        Holder<SealSymbol> symbol = SealSymbol.get(player.level().registryAccess(), symbolKey).orElse(null);
         if (symbol == null) {
             Envelope.LOGGER.warn(
                     "Questlog Envelope seal symbol '{}' is not registered; sending mail without a seal.",
@@ -46,7 +46,7 @@ public final class QuestMailSeal {
         }
 
         Holder<SealMaterial> material = SealMaterial.getOrThrow(
-                player.registryAccess(),
+                player.level().registryAccess(),
                 SealMaterial.RED_WAX
         );
 
