@@ -9,7 +9,6 @@
     "QuestlogEventsMixin"
   ],
   "client": [
-    "ClientPacketsHandlerMixin",
     "QuestEditorScreenMixin"
   ],
   "injectors": {
