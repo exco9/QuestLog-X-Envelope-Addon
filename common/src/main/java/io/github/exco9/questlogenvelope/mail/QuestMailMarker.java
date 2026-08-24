@@ -17,7 +17,6 @@ public final class QuestMailMarker {
     private static final String ROOT_KEY = "questlog_envelope";
     private static final String QUEST_ID_KEY = "quest_id";
     private static final String DIRECT_PLAYER_DROP_KEY = "direct_player_drop";
-    private static final String FONT_SIZE_KEY = "font_size";
 
     private QuestMailMarker() {
     }
@@ -93,62 +92,6 @@ public final class QuestMailMarker {
         addonData.remove(DIRECT_PLAYER_DROP_KEY);
         writeAddonData(stack, customData, addonData);
         return stack;
-    }
-
-    /**
-     * Stores a global visual size preset for quest letters. Envelope itself has
-     * no font-size formatting, so this is deliberately addon metadata while the
-     * actual text stays normal Envelope formatted text.
-     */
-    public static ItemStack setFontSize(ItemStack stack, String fontSize) {
-        String normalized = normalizeFontSize(fontSize);
-        CompoundTag customData = getCustomData(stack);
-        CompoundTag addonData = getAddonData(customData);
-
-        if ("normal".equals(normalized)) {
-            addonData.remove(FONT_SIZE_KEY);
-        } else {
-            addonData.putString(FONT_SIZE_KEY, normalized);
-        }
-
-        writeAddonData(stack, customData, addonData);
-        return stack;
-    }
-
-    public static String getFontSize(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data == null) {
-            return "normal";
-        }
-
-        CompoundTag customData = data.copyTag();
-        if (!customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)) {
-            return "normal";
-        }
-
-        CompoundTag addonData = customData.getCompound(ROOT_KEY);
-        if (!addonData.contains(FONT_SIZE_KEY, Tag.TAG_STRING)) {
-            return "normal";
-        }
-        return normalizeFontSize(addonData.getString(FONT_SIZE_KEY));
-    }
-
-    public static float getFontScale(ItemStack stack) {
-        return switch (getFontSize(stack)) {
-            case "small" -> 0.80F;
-            case "large" -> 1.25F;
-            default -> 1.0F;
-        };
-    }
-
-    public static String normalizeFontSize(String value) {
-        if (value == null) {
-            return "normal";
-        }
-        return switch (value.toLowerCase()) {
-            case "small", "large" -> value.toLowerCase();
-            default -> "normal";
-        };
     }
 
     private static CompoundTag getCustomData(ItemStack stack) {
