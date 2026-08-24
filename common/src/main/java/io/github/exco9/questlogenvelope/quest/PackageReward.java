@@ -3,6 +3,7 @@ package io.github.exco9.questlogenvelope.quest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import io.github.exco9.questlogenvelope.mail.QuestMagicSeal;
 import io.github.exco9.questlogenvelope.mail.QuestMailDelivery;
 import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
 import io.github.exco9.questlogenvelope.mail.QuestMailSeal;
@@ -29,6 +30,7 @@ public final class PackageReward extends Reward {
     private final String title;
     private final JsonArray packageDefinitions;
     private final JsonArray legacyItemDefinitions;
+    private final boolean magicSeal;
 
     public PackageReward(JsonObject definition) {
         super(definition);
@@ -36,6 +38,9 @@ public final class PackageReward extends Reward {
         grantsQuestId = getOptionalId(definition, "grants_quest");
         sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Package";
+        magicSeal = definition.has("magic_seal")
+                && definition.get("magic_seal").isJsonPrimitive()
+                && definition.get("magic_seal").getAsBoolean();
 
         packageDefinitions = definition.has("packages") && definition.get("packages").isJsonArray()
                 ? definition.getAsJsonArray("packages").deepCopy()
@@ -55,19 +60,22 @@ public final class PackageReward extends Reward {
                         .get());
             }
 
+            boolean useMagicSeal = magicSeal && grantsQuestId != null && sealSymbolId != null;
+
             for (int index = 0; index < packages.size(); index++) {
                 ItemStack packageStack = QuestMailSeal.apply(player, packages.get(index), sealSymbolId);
 
-                // One quest reward should progress mail_received once, even when
-                // several physical packages are configured.
+                // One reward should progress the target quest only once, even if
+                // the configured contents produce several physical packages.
                 if (index == 0 && grantsQuestId != null) {
-                    QuestMailMarker.set(packageStack, grantsQuestId);
+                    if (useMagicSeal) {
+                        QuestMagicSeal.attach(packageStack, player, grantsQuestId);
+                    } else {
+                        QuestMailMarker.set(packageStack, grantsQuestId);
+                    }
                 }
 
                 try {
-                    // Quest reward packages are deliberately express: when a mailbox
-                    // exists, a service pigeon starts near it instead of spending the
-                    // full background travel time crossing the world.
                     QuestMailDelivery.dispatch(player, packageStack, senderId, true);
                 } catch (RuntimeException exception) {
                     Envelope.LOGGER.error(
@@ -125,7 +133,6 @@ public final class PackageReward extends Reward {
             return packages;
         }
 
-        // Backward compatibility for quests created before the visual package editor.
         List<ItemStack> contents = new ArrayList<>();
         for (JsonElement definition : legacyItemDefinitions) {
             ItemStack stack = parseStack(player, definition);
@@ -159,7 +166,6 @@ public final class PackageReward extends Reward {
                 try {
                     stack.setCount(Math.max(1, object.get("count").getAsInt()));
                 } catch (RuntimeException ignored) {
-                    // Keep the count parsed by ItemStack/Questlog.
                 }
             }
         }
