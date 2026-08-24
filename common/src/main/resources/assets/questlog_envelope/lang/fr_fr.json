@@ -5,6 +5,8 @@
 
   "questlog_envelope.editor.seal": "Sceau : %s",
   "questlog_envelope.editor.seal.none": "Aucun",
+  "questlog_envelope.editor.seal.button": "Sceau",
+  "questlog_envelope.editor.seal.title": "Choisir un sceau Envelope",
 
   "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
   "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
@@ -22,6 +24,7 @@
   "questlog_envelope.editor.letter.invalid_sender": "Identifiant du service expéditeur invalide",
 
   "questlog_envelope.editor.package.options": "Options de colis Envelope...",
+  "questlog_envelope.editor.package.options_short": "Options...",
   "questlog_envelope.editor.package.title": "Options de colis Envelope",
   "questlog_envelope.editor.package.settings": "Réglages de récompense",
   "questlog_envelope.editor.package.sender": "Service expéditeur (optionnel)",
