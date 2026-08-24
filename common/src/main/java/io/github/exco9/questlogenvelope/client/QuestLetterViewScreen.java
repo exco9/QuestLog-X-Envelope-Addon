@@ -48,9 +48,10 @@ public final class QuestLetterViewScreen extends LetterViewScreen {
             return;
         }
 
-        // LetterViewScreen has no child widgets. Its super.render() call only
-        // services Screen renderables, so for scaled quest letters we render the
-        // same content directly to avoid drawing the normal-size text underneath.
+        // Screen.render normally performs this call. We intentionally do not call
+        // super.render here because LetterViewScreen would also draw normal-size text.
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+
         final int originX = this.leftPos + 17;
         final int originY = this.topPos + 21;
         int textColor = 0xFF7B593D;
@@ -80,7 +81,7 @@ public final class QuestLetterViewScreen extends LetterViewScreen {
             RenderSystem.disableBlend();
         }
 
-        @Nullable Style style = getComponentStyleAtScaled(mouseX, mouseY);
+        @Nullable Style style = getComponentStyleAt(mouseX, mouseY);
         if (style != null && style.getHoverEvent() != null) {
             guiGraphics.renderComponentHoverEffect(this.font, style, mouseX, mouseY);
         } else if (this.lines.size() > this.maxTextLines
@@ -91,8 +92,12 @@ public final class QuestLetterViewScreen extends LetterViewScreen {
         }
     }
 
-    @Nullable
-    private Style getComponentStyleAtScaled(double mouseX, double mouseY) {
+    @Override
+    public @Nullable Style getComponentStyleAt(double mouseX, double mouseY) {
+        if (this.questFontScale == 1.0F) {
+            return super.getComponentStyleAt(mouseX, mouseY);
+        }
+
         if (this.lines.isEmpty()) {
             return null;
         }
