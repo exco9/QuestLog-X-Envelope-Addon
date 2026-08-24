@@ -3,6 +3,9 @@
   "questlog_envelope.editor.type.package": "Envelope Package",
   "questlog_envelope.editor.type.mail_received": "Mail Received",
 
+  "questlog_envelope.editor.seal": "Seal: %s",
+  "questlog_envelope.editor.seal.none": "None",
+
   "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
   "questlog_envelope.editor.letter.title": "Envelope Letter Options",
   "questlog_envelope.editor.letter.settings": "Reward settings",
@@ -11,6 +14,11 @@
   "questlog_envelope.editor.letter.letter_title": "Letter title",
   "questlog_envelope.editor.letter.body": "Letter body",
   "questlog_envelope.editor.letter.auto_claim": "Auto-claim: %s",
+  "questlog_envelope.editor.letter.font_size": "Text size: %s",
+  "questlog_envelope.editor.letter.font_size.small": "Small",
+  "questlog_envelope.editor.letter.font_size.normal": "Normal",
+  "questlog_envelope.editor.letter.font_size.large": "Large",
+  "questlog_envelope.editor.letter.format_hint": "Select text = B/I/U + colors",
   "questlog_envelope.editor.letter.invalid_sender": "Invalid sender service ID",
 
   "questlog_envelope.editor.package.options": "Envelope Package Options...",
