@@ -15,10 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Questlog reward editor that reuses Envelope's own letter paper, text box,
- * formatting toolbar and seal renderer.
- */
+/** Questlog letter editor using Envelope's native paper, formatting and seal renderer. */
 public final class LetterRewardEditorScreen extends Screen {
     private final Screen parent;
     private final JsonObject rewardEntry;
@@ -28,6 +25,7 @@ public final class LetterRewardEditorScreen extends Screen {
     private EditBox letterTitleBox;
     private TextBox textBox;
     private boolean autoClaim;
+    private boolean magicSeal;
 
     private int letterLeft;
     private int letterTop;
@@ -43,6 +41,7 @@ public final class LetterRewardEditorScreen extends Screen {
         this.parent = parent;
         this.rewardEntry = rewardEntry;
         this.autoClaim = rewardEntry.has("auto_claim") && rewardEntry.get("auto_claim").getAsBoolean();
+        this.magicSeal = rewardEntry.has("magic_seal") && rewardEntry.get("magic_seal").getAsBoolean();
         this.sealSelection = new SealSelection(
                 rewardEntry.has("seal") ? rewardEntry.get("seal").getAsString() : null
         );
@@ -52,7 +51,7 @@ public final class LetterRewardEditorScreen extends Screen {
     protected void init() {
         int letterWidth = 176;
         int letterHeight = 192;
-        int panelHeight = 220;
+        int panelHeight = 242;
         this.panelWidth = 180;
         int gap = 12;
         int totalWidth = letterWidth + gap + panelWidth;
@@ -112,32 +111,43 @@ public final class LetterRewardEditorScreen extends Screen {
             button.setMessage(autoClaimLabel());
         }).bounds(this.panelX, this.panelY + 94, this.panelWidth, 18).build());
 
+        this.addRenderableWidget(Button.builder(magicSealLabel(), button -> {
+            this.magicSeal = !this.magicSeal;
+            if (this.magicSeal && this.sealSelection.get() == null) {
+                this.sealSelection.next();
+            }
+            button.setMessage(magicSealLabel());
+        }).bounds(this.panelX, this.panelY + 116, this.panelWidth, 18).build());
+
         this.addRenderableWidget(Button.builder(
                 Component.literal("<"),
                 button -> this.sealSelection.previous()
-        ).bounds(this.panelX, this.panelY + 121, 32, 20).build());
+        ).bounds(this.panelX, this.panelY + 143, 32, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("questlog_envelope.editor.seal.none"),
-                button -> this.sealSelection.clear()
-        ).bounds(this.panelX + 38, this.panelY + 121, this.panelWidth - 76, 20).build());
+                button -> {
+                    this.sealSelection.clear();
+                    this.magicSeal = false;
+                }
+        ).bounds(this.panelX + 38, this.panelY + 143, this.panelWidth - 76, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.literal(">"),
                 button -> this.sealSelection.next()
-        ).bounds(this.panelX + this.panelWidth - 32, this.panelY + 121, 32, 20).build());
+        ).bounds(this.panelX + this.panelWidth - 32, this.panelY + 143, 32, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.cancel"),
                 button -> this.onClose()
-        ).bounds(this.panelX, this.panelY + 196, (this.panelWidth - 6) / 2, 20).build());
+        ).bounds(this.panelX, this.panelY + 218, (this.panelWidth - 6) / 2, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 button -> saveAndClose()
         ).bounds(
                 this.panelX + (this.panelWidth + 6) / 2,
-                this.panelY + 196,
+                this.panelY + 218,
                 (this.panelWidth - 6) / 2,
                 20
         ).build());
@@ -162,6 +172,13 @@ public final class LetterRewardEditorScreen extends Screen {
         return Component.translatable(
                 "questlog_envelope.editor.letter.auto_claim",
                 Component.translatable(this.autoClaim ? "options.on" : "options.off")
+        );
+    }
+
+    private Component magicSealLabel() {
+        return Component.translatable(
+                "questlog_envelope.editor.magic_seal",
+                Component.translatable(this.magicSeal ? "options.on" : "options.off")
         );
     }
 
@@ -192,14 +209,19 @@ public final class LetterRewardEditorScreen extends Screen {
             this.rewardEntry.addProperty("text", text);
         }
 
-        // Font-size presets were removed; clean legacy definitions when edited.
         this.rewardEntry.remove("font_size");
 
         ResourceLocation seal = this.sealSelection.get();
         if (seal == null) {
             this.rewardEntry.remove("seal");
+            this.rewardEntry.remove("magic_seal");
         } else {
             this.rewardEntry.addProperty("seal", seal.toString());
+            if (this.magicSeal) {
+                this.rewardEntry.addProperty("magic_seal", true);
+            } else {
+                this.rewardEntry.remove("magic_seal");
+            }
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -223,7 +245,6 @@ public final class LetterRewardEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Same special handling Envelope uses for its formatting toolbar.
         if (this.getFocused() instanceof TextBox box
                 && box.formattingToolbarMouseClicked(mouseX, mouseY, button)) {
             return true;
@@ -249,7 +270,7 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.panelX - 6,
                 this.panelY - 6,
                 this.panelX + this.panelWidth + 6,
-                this.panelY + 220,
+                this.panelY + 242,
                 0xB0101010
         );
     }
@@ -285,17 +306,16 @@ public final class LetterRewardEditorScreen extends Screen {
         this.sealSelection.renderPreview(
                 graphics,
                 this.panelX + this.panelWidth / 2 - 15,
-                this.panelY + 146
+                this.panelY + 168
         );
         graphics.drawCenteredString(
                 this.font,
                 Component.translatable("questlog_envelope.editor.seal", this.sealSelection.label()),
                 this.panelX + this.panelWidth / 2,
-                this.panelY + 178,
+                this.panelY + 200,
                 0xFFFFFF
         );
 
-        // Keep this reminder: Envelope's formatting toolbar appears when text is selected.
         graphics.drawCenteredString(
                 this.font,
                 Component.translatable("questlog_envelope.editor.letter.format_hint"),
@@ -309,7 +329,7 @@ public final class LetterRewardEditorScreen extends Screen {
                     this.font,
                     this.validationError,
                     this.panelX + this.panelWidth / 2,
-                    this.panelY + 112,
+                    this.panelY + 136,
                     0xFF5555
             );
         }
