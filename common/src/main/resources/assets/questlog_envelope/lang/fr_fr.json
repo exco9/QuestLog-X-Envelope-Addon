@@ -3,6 +3,9 @@
   "questlog_envelope.editor.type.package": "Colis Envelope",
   "questlog_envelope.editor.type.mail_received": "Courrier reçu",
 
+  "questlog_envelope.editor.seal": "Sceau : %s",
+  "questlog_envelope.editor.seal.none": "Aucun",
+
   "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
   "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
   "questlog_envelope.editor.letter.settings": "Réglages de récompense",
@@ -11,6 +14,11 @@
   "questlog_envelope.editor.letter.letter_title": "Titre de la lettre",
   "questlog_envelope.editor.letter.body": "Contenu de la lettre",
   "questlog_envelope.editor.letter.auto_claim": "Récompense automatique : %s",
+  "questlog_envelope.editor.letter.font_size": "Taille du texte : %s",
+  "questlog_envelope.editor.letter.font_size.small": "Petite",
+  "questlog_envelope.editor.letter.font_size.normal": "Normale",
+  "questlog_envelope.editor.letter.font_size.large": "Grande",
+  "questlog_envelope.editor.letter.format_hint": "Sélection = B/I/U + couleurs",
   "questlog_envelope.editor.letter.invalid_sender": "Identifiant du service expéditeur invalide",
 
   "questlog_envelope.editor.package.options": "Options de colis Envelope...",
