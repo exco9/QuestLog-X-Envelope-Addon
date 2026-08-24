@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.exco9.questlogenvelope.client.LetterRewardEditorScreen;
+import io.github.exco9.questlogenvelope.client.MailSentObjectiveEditorScreen;
 import io.github.exco9.questlogenvelope.client.PackageRewardEditorScreen;
 import io.github.exco9.questlogenvelope.client.SealPickerScreen;
 import net.minecraft.client.Minecraft;
@@ -20,11 +21,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Adds compact Envelope-specific editor entry points without replacing
- * Questlog's editor. Questlog remains responsible for type selection,
- * Quest-ID autocomplete, reward display name and icon.
- */
+/** Adds compact Envelope-specific editor entry points without replacing Questlog's editor. */
 @Mixin(value = QuestEditorScreen.class, remap = false)
 public abstract class QuestEditorScreenMixin extends Screen {
     @Shadow(remap = false)
@@ -41,6 +38,9 @@ public abstract class QuestEditorScreenMixin extends Screen {
     NoShadowEditBox entryTargetBox;
 
     @Shadow(remap = false)
+    NoShadowEditBox entryAmountBox;
+
+    @Shadow(remap = false)
     NoShadowEditBox entryIconBox;
 
     protected QuestEditorScreenMixin(Component title) {
@@ -49,53 +49,60 @@ public abstract class QuestEditorScreenMixin extends Screen {
 
     @Inject(method = "buildRightPageEditEntry", at = @At("TAIL"), remap = false)
     private void questlogEnvelope$addMailOptions(int panel2X, int panel2Y, CallbackInfo ci) {
-        if (!questlogEnvelope$isMailReward(this.editingType) || this.editingEntry == null) {
+        if (this.editingEntry == null) {
             return;
         }
 
-        boolean packageReward = "questlog_envelope:package".equals(this.editingType);
-        int optionsWidth = packageReward ? 78 : 130;
-        Component label = Component.translatable(packageReward
-                ? "questlog_envelope.editor.package.options_short"
-                : "questlog_envelope.editor.letter.options");
+        if (questlogEnvelope$isMailReward(this.editingType)) {
+            boolean packageReward = "questlog_envelope:package".equals(this.editingType);
+            int optionsWidth = packageReward ? 78 : 130;
+            Component label = Component.translatable(packageReward
+                    ? "questlog_envelope.editor.package.options_short"
+                    : "questlog_envelope.editor.letter.options");
 
-        Button options = Button.builder(label, button -> {
-            JsonObject workingCopy = questlogEnvelope$createWorkingCopy();
-            QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
-            Screen editor = packageReward
-                    ? new PackageRewardEditorScreen(parent, workingCopy)
-                    : new LetterRewardEditorScreen(parent, workingCopy);
-            Minecraft.getInstance().setScreen(editor);
-        }).bounds(panel2X + 15, panel2Y + 138, optionsWidth, 16).build();
+            this.addRenderableWidget(Button.builder(label, button -> {
+                JsonObject workingCopy = questlogEnvelope$createWorkingCopy("grants_quest", false);
+                QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
+                Screen editor = packageReward
+                        ? new PackageRewardEditorScreen(parent, workingCopy)
+                        : new LetterRewardEditorScreen(parent, workingCopy);
+                Minecraft.getInstance().setScreen(editor);
+            }).bounds(panel2X + 15, panel2Y + 138, optionsWidth, 16).build());
 
-        this.addRenderableWidget(options);
+            if (packageReward) {
+                this.addRenderableWidget(Button.builder(
+                        Component.translatable("questlog_envelope.editor.seal.button"),
+                        button -> {
+                            JsonObject workingCopy = questlogEnvelope$createWorkingCopy("grants_quest", false);
+                            QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
+                            Minecraft.getInstance().setScreen(new SealPickerScreen(parent, workingCopy));
+                        }
+                ).bounds(panel2X + 97, panel2Y + 138, 48, 16).build());
+            }
+            return;
+        }
 
-        if (packageReward) {
+        if ("questlog_envelope:mail_sent".equals(this.editingType)) {
             this.addRenderableWidget(Button.builder(
-                    Component.translatable("questlog_envelope.editor.seal.button"),
+                    Component.translatable("questlog_envelope.editor.mail_sent.options"),
                     button -> {
-                        JsonObject workingCopy = questlogEnvelope$createWorkingCopy();
+                        JsonObject workingCopy = questlogEnvelope$createWorkingCopy("recipient", true);
                         QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
-                        Minecraft.getInstance().setScreen(new SealPickerScreen(parent, workingCopy));
+                        Minecraft.getInstance().setScreen(new MailSentObjectiveEditorScreen(parent, workingCopy));
                     }
-            ).bounds(panel2X + 97, panel2Y + 138, 48, 16).build());
+            ).bounds(panel2X + 15, panel2Y + 138, 130, 16).build());
         }
     }
 
-    private JsonObject questlogEnvelope$createWorkingCopy() {
+    private JsonObject questlogEnvelope$createWorkingCopy(String targetKey, boolean includeAmount) {
         JsonObject workingCopy = this.editingEntry == null
                 ? new JsonObject()
                 : this.editingEntry.deepCopy();
-        questlogEnvelope$stashQuestlogFields(workingCopy);
+        questlogEnvelope$stashQuestlogFields(workingCopy, targetKey, includeAmount);
         this.editingEntry = workingCopy;
         return workingCopy;
     }
 
-    /**
-     * Questlog strips only the built-in "questlog:" namespace when drawing the
-     * type picker. Keep our real ResourceLocation untouched, but replace the
-     * rendered text with a short localized label so it fits the 130px list.
-     */
     @Redirect(
             method = "render",
             at = @At(
@@ -121,30 +128,34 @@ public abstract class QuestEditorScreenMixin extends Screen {
                     Component.translatable("questlog_envelope.editor.type.package").getString();
             case "questlog_envelope:mail_received" ->
                     Component.translatable("questlog_envelope.editor.type.mail_received").getString();
+            case "questlog_envelope:mail_sent" ->
+                    Component.translatable("questlog_envelope.editor.type.mail_sent").getString();
             default -> normal;
         };
     }
 
-    /**
-     * Questlog knows how to save custom target keys, but its generic cleanup
-     * list does not know our `grants_quest` key. Explicitly remove it when the
-     * editor field is cleared.
-     */
     @Inject(method = "saveEditingEntry", at = @At("HEAD"), remap = false)
-    private void questlogEnvelope$clearEmptyGrantedQuest(CallbackInfo ci) {
+    private void questlogEnvelope$clearEmptyTargets(CallbackInfo ci) {
+        if (this.editingEntry == null || this.entryTargetBox == null) {
+            return;
+        }
+
         if (questlogEnvelope$isMailReward(this.editingType)
-                && this.editingEntry != null
-                && this.entryTargetBox != null
                 && this.entryTargetBox.getValue().trim().isEmpty()) {
             this.editingEntry.remove("grants_quest");
         }
+
+        if ("questlog_envelope:mail_sent".equals(this.editingType)
+                && this.entryTargetBox.getValue().trim().isEmpty()) {
+            this.editingEntry.remove("recipient");
+        }
     }
 
-    /**
-     * Switching screens causes Questlog to rebuild its widgets. Preserve the
-     * currently typed generic fields in a detached working copy first.
-     */
-    private void questlogEnvelope$stashQuestlogFields(JsonObject target) {
+    private void questlogEnvelope$stashQuestlogFields(
+            JsonObject target,
+            String targetKey,
+            boolean includeAmount
+    ) {
         target.addProperty("type", this.editingType);
 
         if (this.entryNameBox != null) {
@@ -157,11 +168,25 @@ public abstract class QuestEditorScreenMixin extends Screen {
         }
 
         if (this.entryTargetBox != null) {
-            String grantedQuest = this.entryTargetBox.getValue().trim();
-            if (grantedQuest.isEmpty()) {
-                target.remove("grants_quest");
+            String value = this.entryTargetBox.getValue().trim();
+            if (value.isEmpty()) {
+                target.remove(targetKey);
             } else {
-                target.addProperty("grants_quest", grantedQuest);
+                target.addProperty(targetKey, value);
+            }
+        }
+
+        if (includeAmount && this.entryAmountBox != null) {
+            String amount = this.entryAmountBox.getValue().trim();
+            try {
+                int requiredAmount = Math.max(1, Integer.parseInt(amount));
+                if (requiredAmount == 1) {
+                    target.remove("required_amount");
+                } else {
+                    target.addProperty("required_amount", requiredAmount);
+                }
+            } catch (NumberFormatException ignored) {
+                // Questlog will keep handling validation for its own amount field.
             }
         }
 
