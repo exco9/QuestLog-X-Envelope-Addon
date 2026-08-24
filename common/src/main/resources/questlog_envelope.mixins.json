@@ -7,7 +7,8 @@
     "BlockDropOffHandlerMixin",
     "DeliveryManagerMixin",
     "PlayerDropOffHandlerMixin",
-    "QuestlogEventsMixin"
+    "QuestlogEventsMixin",
+    "SealedMailItemMixin"
   ],
   "client": [
     "QuestEditorScreenMixin"
