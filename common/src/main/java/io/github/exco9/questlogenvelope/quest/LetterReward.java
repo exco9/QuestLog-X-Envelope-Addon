@@ -20,7 +20,6 @@ public final class LetterReward extends Reward {
     @Nullable private final ResourceLocation sealSymbolId;
     private final String title;
     private final String text;
-    private final String fontSize;
 
     public LetterReward(JsonObject definition) {
         super(definition);
@@ -29,9 +28,6 @@ public final class LetterReward extends Reward {
         sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Letter";
         text = definition.has("text") ? definition.get("text").getAsString() : "";
-        fontSize = QuestMailMarker.normalizeFontSize(
-                definition.has("font_size") ? definition.get("font_size").getAsString() : "normal"
-        );
     }
 
     @Override
@@ -39,8 +35,6 @@ public final class LetterReward extends Reward {
         ItemStack letter = Mail.createLetter(Component.literal(text))
                 .set(DataComponents.ITEM_NAME, Component.literal(title))
                 .get();
-
-        QuestMailMarker.setFontSize(letter, fontSize);
 
         if (grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
