@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.exco9.questlogenvelope.client.LetterRewardEditorScreen;
 import io.github.exco9.questlogenvelope.client.PackageRewardEditorScreen;
+import io.github.exco9.questlogenvelope.client.SealPickerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -53,25 +54,41 @@ public abstract class QuestEditorScreenMixin extends Screen {
         }
 
         boolean packageReward = "questlog_envelope:package".equals(this.editingType);
+        int optionsWidth = packageReward ? 78 : 130;
         Component label = Component.translatable(packageReward
-                ? "questlog_envelope.editor.package.options"
+                ? "questlog_envelope.editor.package.options_short"
                 : "questlog_envelope.editor.letter.options");
 
         Button options = Button.builder(label, button -> {
-            // Work on a detached copy. If the player later presses Questlog's
-            // Cancel button, the original list entry is still untouched.
-            JsonObject workingCopy = this.editingEntry.deepCopy();
-            questlogEnvelope$stashQuestlogFields(workingCopy);
-            this.editingEntry = workingCopy;
-
+            JsonObject workingCopy = questlogEnvelope$createWorkingCopy();
             QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
             Screen editor = packageReward
                     ? new PackageRewardEditorScreen(parent, workingCopy)
                     : new LetterRewardEditorScreen(parent, workingCopy);
             Minecraft.getInstance().setScreen(editor);
-        }).bounds(panel2X + 15, panel2Y + 138, 130, 16).build();
+        }).bounds(panel2X + 15, panel2Y + 138, optionsWidth, 16).build();
 
         this.addRenderableWidget(options);
+
+        if (packageReward) {
+            this.addRenderableWidget(Button.builder(
+                    Component.translatable("questlog_envelope.editor.seal.button"),
+                    button -> {
+                        JsonObject workingCopy = questlogEnvelope$createWorkingCopy();
+                        QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
+                        Minecraft.getInstance().setScreen(new SealPickerScreen(parent, workingCopy));
+                    }
+            ).bounds(panel2X + 97, panel2Y + 138, 48, 16).build());
+        }
+    }
+
+    private JsonObject questlogEnvelope$createWorkingCopy() {
+        JsonObject workingCopy = this.editingEntry == null
+                ? new JsonObject()
+                : this.editingEntry.deepCopy();
+        questlogEnvelope$stashQuestlogFields(workingCopy);
+        this.editingEntry = workingCopy;
+        return workingCopy;
     }
 
     /**
