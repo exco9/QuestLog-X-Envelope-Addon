@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.github.exco9.questlogenvelope.mail.QuestMailDelivery;
 import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
+import io.github.exco9.questlogenvelope.mail.QuestMailSeal;
 import io.github.mortuusars.envelope.Envelope;
 import io.github.mortuusars.envelope.world.item.component.PackageContents;
 import io.github.mortuusars.envelope.world.item.mail.Mail;
@@ -24,6 +25,7 @@ import java.util.List;
 public final class PackageReward extends Reward {
     @Nullable private final ResourceLocation senderId;
     @Nullable private final ResourceLocation grantsQuestId;
+    @Nullable private final ResourceLocation sealSymbolId;
     private final String title;
     private final JsonArray packageDefinitions;
     private final JsonArray legacyItemDefinitions;
@@ -32,6 +34,7 @@ public final class PackageReward extends Reward {
         super(definition);
         senderId = getOptionalId(definition, "sender");
         grantsQuestId = getOptionalId(definition, "grants_quest");
+        sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Package";
 
         packageDefinitions = definition.has("packages") && definition.get("packages").isJsonArray()
@@ -53,7 +56,7 @@ public final class PackageReward extends Reward {
             }
 
             for (int index = 0; index < packages.size(); index++) {
-                ItemStack packageStack = packages.get(index);
+                ItemStack packageStack = QuestMailSeal.apply(player, packages.get(index), sealSymbolId);
 
                 // One quest reward should progress mail_received once, even when
                 // several physical packages are configured.
