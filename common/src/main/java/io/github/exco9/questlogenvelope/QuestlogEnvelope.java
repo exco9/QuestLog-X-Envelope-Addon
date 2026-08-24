@@ -2,6 +2,7 @@ package io.github.exco9.questlogenvelope;
 
 import io.github.exco9.questlogenvelope.quest.LetterReward;
 import io.github.exco9.questlogenvelope.quest.MailReceivedObjective;
+import io.github.exco9.questlogenvelope.quest.MailSentObjective;
 import io.github.exco9.questlogenvelope.quest.PackageReward;
 import net.minecraft.resources.ResourceLocation;
 import org.infernalstudios.questlog.core.quests.EditorMetadata;
@@ -22,8 +23,6 @@ public final class QuestlogEnvelope {
         }
         initialized = true;
 
-        // Questlog automatically exposes registered objective types in its editor.
-        // Leaving `quest` empty makes MailReceivedObjective use its parent quest id.
         QuestObjectiveRegistry.register(
                 id("mail_received"),
                 MailReceivedObjective::new,
@@ -35,8 +34,20 @@ public final class QuestlogEnvelope {
                 )
         );
 
-        // Questlog owns the common reward fields and Quest-ID autocomplete.
-        // Envelope-specific fields are edited by the addon client screens.
+        // Works both as a normal objective and as a prerequisite. The recipient
+        // is edited in Questlog's native target field; extra mail/content filters
+        // are configured in the addon's options screen.
+        QuestObjectiveRegistry.register(
+                id("mail_sent"),
+                MailSentObjective::new,
+                new EditorMetadata(
+                        "recipient",
+                        "Recipient address (blank = any):",
+                        "required_amount",
+                        EditorMetadata.SuggestionType.NONE
+                )
+        );
+
         QuestRewardRegistry.register(
                 id("letter"),
                 LetterReward::new,
