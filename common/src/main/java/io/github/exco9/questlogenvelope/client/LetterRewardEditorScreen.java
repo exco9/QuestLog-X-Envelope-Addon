@@ -28,7 +28,6 @@ public final class LetterRewardEditorScreen extends Screen {
     private EditBox senderBox;
     private EditBox letterTitleBox;
     private TextBox textBox;
-    private Button fontSizeButton;
     private boolean autoClaim;
     private String fontSize;
 
@@ -58,11 +57,11 @@ public final class LetterRewardEditorScreen extends Screen {
     protected void init() {
         int letterWidth = 176;
         int letterHeight = 192;
-        int panelHeight = 220;
+        int panelHeight = 232;
         this.panelWidth = 180;
         int gap = 12;
         int totalWidth = letterWidth + gap + panelWidth;
-        int top = Math.max(8, (this.height - panelHeight) / 2);
+        int top = Math.max(4, (this.height - panelHeight) / 2);
 
         this.letterLeft = Math.max(4, (this.width - totalWidth) / 2);
         this.letterTop = top + (panelHeight - letterHeight) / 2;
@@ -118,7 +117,7 @@ public final class LetterRewardEditorScreen extends Screen {
             button.setMessage(autoClaimLabel());
         }).bounds(this.panelX, this.panelY + 94, this.panelWidth, 18).build());
 
-        this.fontSizeButton = this.addRenderableWidget(Button.builder(fontSizeLabel(), button -> {
+        this.addRenderableWidget(Button.builder(fontSizeLabel(), button -> {
             this.fontSize = switch (this.fontSize) {
                 case "normal" -> "small";
                 case "small" -> "large";
@@ -145,14 +144,14 @@ public final class LetterRewardEditorScreen extends Screen {
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.cancel"),
                 button -> this.onClose()
-        ).bounds(this.panelX, this.panelY + 190, (this.panelWidth - 6) / 2, 20).build());
+        ).bounds(this.panelX, this.panelY + 208, (this.panelWidth - 6) / 2, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 button -> saveAndClose()
         ).bounds(
                 this.panelX + (this.panelWidth + 6) / 2,
-                this.panelY + 190,
+                this.panelY + 208,
                 (this.panelWidth - 6) / 2,
                 20
         ).build());
@@ -274,7 +273,7 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.panelX - 6,
                 this.panelY - 6,
                 this.panelX + this.panelWidth + 6,
-                this.panelY + 218,
+                this.panelY + 232,
                 0xB0101010
         );
     }
@@ -307,17 +306,17 @@ public final class LetterRewardEditorScreen extends Screen {
                 false
         );
 
+        this.sealSelection.renderPreview(
+                graphics,
+                this.panelX + this.panelWidth / 2 - 15,
+                this.panelY + 166
+        );
         graphics.drawCenteredString(
                 this.font,
                 Component.translatable("questlog_envelope.editor.seal", this.sealSelection.label()),
                 this.panelX + this.panelWidth / 2,
-                this.panelY + 166,
+                this.panelY + 197,
                 0xFFFFFF
-        );
-        this.sealSelection.renderPreview(
-                graphics,
-                this.panelX + this.panelWidth / 2 - 15,
-                this.panelY + 157
         );
 
         graphics.drawCenteredString(
@@ -333,7 +332,7 @@ public final class LetterRewardEditorScreen extends Screen {
                     this.font,
                     this.validationError,
                     this.panelX + this.panelWidth / 2,
-                    this.panelY + 212,
+                    this.panelY + 135,
                     0xFF5555
             );
         }
