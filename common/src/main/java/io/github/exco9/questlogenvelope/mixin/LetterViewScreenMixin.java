@@ -51,6 +51,9 @@ public abstract class LetterViewScreenMixin {
     private boolean questlogEnvelope$activationSent;
 
     @Unique
+    private boolean questlogEnvelope$locallyActivated;
+
+    @Unique
     private long questlogEnvelope$holdStartedAt;
 
     @Inject(method = "render", at = @At("TAIL"), remap = false)
@@ -70,7 +73,18 @@ public abstract class LetterViewScreenMixin {
         int size = questlogEnvelope$circleSize();
         int x = questlogEnvelope$circleX();
         int y = questlogEnvelope$circleY();
+        int color = QuestMagicCircle.getColor(this.letter.getItemStack());
         MagicCircleTexture.render(graphics, x, y, size);
+
+        // Once the server marks the item as activated, keep the exact same
+        // circle permanently filled with the configured color. The local flag
+        // avoids a brief black flash while the inventory update travels back.
+        if (QuestMagicCircle.isActivated(this.letter.getItemStack())
+                || this.questlogEnvelope$locallyActivated) {
+            MagicCircleTexture.renderTintedFill(graphics, x, y, size, 1.0F, color);
+            questlogEnvelope$resetHold();
+            return;
+        }
 
         if (!this.questlogEnvelope$holdingCircle) {
             return;
@@ -96,12 +110,13 @@ public abstract class LetterViewScreenMixin {
                 y,
                 size,
                 progress,
-                QuestMagicCircle.getColor(this.letter.getItemStack())
+                color
         );
 
         if (progress >= 1.0F && !this.questlogEnvelope$activationSent && this.hand != null) {
             if (minecraft.player != null && minecraft.player.connection != null) {
                 this.questlogEnvelope$activationSent = true;
+                this.questlogEnvelope$locallyActivated = true;
                 minecraft.player.connection.sendCommand(
                         "questlog_envelope magic_circle activate " + actionId.get()
                 );
@@ -120,7 +135,9 @@ public abstract class LetterViewScreenMixin {
             return;
         }
 
-        if (!QuestMagicCircle.has(this.letter.getItemStack())) {
+        if (!QuestMagicCircle.has(this.letter.getItemStack())
+                || QuestMagicCircle.isActivated(this.letter.getItemStack())
+                || this.questlogEnvelope$locallyActivated) {
             return;
         }
 
