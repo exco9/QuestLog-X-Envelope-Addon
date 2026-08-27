@@ -8,9 +8,9 @@
   "questlog_envelope.editor.seal.none": "Aucun",
   "questlog_envelope.editor.seal.button": "Sceau",
   "questlog_envelope.editor.seal.title": "Choisir un sceau Envelope",
-  "questlog_envelope.editor.magic_seal": "Sceau magique : %s",
-  "questlog_envelope.editor.magic_seal.hint": "Déclenche la quête liée quand le sceau est brisé",
-  "questlog_envelope.magic_seal.accepted": "Le sceau magique a validé votre participation.",
+  "questlog_envelope.editor.magic_circle": "Cercle magique : %s",
+  "questlog_envelope.magic_circle.activated": "Le cercle magique a été activé.",
+  "questlog_envelope.magic_circle.already_used": "Ce cercle magique a déjà été utilisé.",
 
   "questlog_envelope.editor.letter.options": "Options de lettre Envelope...",
   "questlog_envelope.editor.letter.title": "Options de lettre Envelope",
