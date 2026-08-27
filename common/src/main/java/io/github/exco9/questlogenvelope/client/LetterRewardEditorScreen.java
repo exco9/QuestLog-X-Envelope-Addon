@@ -18,6 +18,8 @@ import org.jetbrains.annotations.Nullable;
 
 /** Questlog letter editor using Envelope's native paper and formatting UI. */
 public final class LetterRewardEditorScreen extends Screen {
+    private static final int HANDLE_RADIUS = 4;
+
     private final Screen parent;
     private final JsonObject rewardEntry;
     private final SealSelection sealSelection;
@@ -29,6 +31,15 @@ public final class LetterRewardEditorScreen extends Screen {
     private TextBox textBox;
     private boolean autoClaim;
     private boolean magicCircle;
+
+    private int magicCircleX;
+    private int magicCircleY;
+    private int magicCircleSize;
+    private CircleDragMode circleDragMode = CircleDragMode.NONE;
+    private double moveGrabOffsetX;
+    private double moveGrabOffsetY;
+    private double resizeCenterX;
+    private double resizeCenterY;
 
     private int letterLeft;
     private int letterTop;
@@ -45,6 +56,19 @@ public final class LetterRewardEditorScreen extends Screen {
         this.rewardEntry = rewardEntry;
         this.autoClaim = rewardEntry.has("auto_claim") && rewardEntry.get("auto_claim").getAsBoolean();
         this.magicCircle = rewardEntry.has("magic_circle") && rewardEntry.get("magic_circle").getAsBoolean();
+
+        this.magicCircleSize = QuestMagicCircle.clampSize(
+                getInt(rewardEntry, "magic_circle_size", QuestMagicCircle.DEFAULT_SIZE)
+        );
+        this.magicCircleX = QuestMagicCircle.clampX(
+                getInt(rewardEntry, "magic_circle_x", QuestMagicCircle.defaultX(this.magicCircleSize)),
+                this.magicCircleSize
+        );
+        this.magicCircleY = QuestMagicCircle.clampY(
+                getInt(rewardEntry, "magic_circle_y", QuestMagicCircle.defaultY(this.magicCircleSize)),
+                this.magicCircleSize
+        );
+
         this.sealSelection = new SealSelection(
                 rewardEntry.has("seal") ? rewardEntry.get("seal").getAsString() : null
         );
@@ -72,10 +96,10 @@ public final class LetterRewardEditorScreen extends Screen {
 
         this.textBox = this.addRenderableWidget(new TextBox(
                 this.font,
-                this.letterLeft + 17,
-                this.letterTop + 21,
-                142,
-                144
+                writableLeft(),
+                writableTop(),
+                QuestMagicCircle.WRITABLE_WIDTH,
+                QuestMagicCircle.WRITABLE_HEIGHT
         )
                 .setFontColor(0xFF7B593D)
                 .setFontUnfocusedColor(0xFF7B593D)
@@ -116,6 +140,7 @@ public final class LetterRewardEditorScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(magicCircleLabel(), button -> {
             this.magicCircle = !this.magicCircle;
+            this.circleDragMode = CircleDragMode.NONE;
             button.setMessage(magicCircleLabel());
             updateMagicCircleFields();
         }).bounds(this.panelX, this.panelY + 111, this.panelWidth, 18).build());
@@ -158,7 +183,7 @@ public final class LetterRewardEditorScreen extends Screen {
         ).bounds(this.panelX, this.panelY + 171, 28, 20).build());
 
         this.addRenderableWidget(Button.builder(
-                Component.translatable("questlog_envelope.editor.seal.none"),
+                Component.translatable("questlog_envelope.editor.seal.reset"),
                 button -> this.sealSelection.clear()
         ).bounds(this.panelX + 34, this.panelY + 171, this.panelWidth - 68, 20).build());
 
@@ -200,6 +225,7 @@ public final class LetterRewardEditorScreen extends Screen {
                 ? getString("magic_circle_command", "")
                 : this.magicCircleCommandBox.getValue();
 
+        this.circleDragMode = CircleDragMode.NONE;
         super.resize(minecraft, width, height);
 
         this.textBox.getEditor().setText(message);
@@ -279,8 +305,15 @@ public final class LetterRewardEditorScreen extends Screen {
                 return;
             }
 
+            this.magicCircleSize = QuestMagicCircle.clampSize(this.magicCircleSize);
+            this.magicCircleX = QuestMagicCircle.clampX(this.magicCircleX, this.magicCircleSize);
+            this.magicCircleY = QuestMagicCircle.clampY(this.magicCircleY, this.magicCircleSize);
+
             this.rewardEntry.addProperty("magic_circle", true);
             this.rewardEntry.addProperty("magic_circle_color", formatColor(color));
+            this.rewardEntry.addProperty("magic_circle_x", this.magicCircleX);
+            this.rewardEntry.addProperty("magic_circle_y", this.magicCircleY);
+            this.rewardEntry.addProperty("magic_circle_size", this.magicCircleSize);
 
             String command = this.magicCircleCommandBox.getValue().trim();
             if (command.isEmpty()) {
@@ -292,6 +325,9 @@ public final class LetterRewardEditorScreen extends Screen {
             this.rewardEntry.remove("magic_circle");
             this.rewardEntry.remove("magic_circle_color");
             this.rewardEntry.remove("magic_circle_command");
+            this.rewardEntry.remove("magic_circle_x");
+            this.rewardEntry.remove("magic_circle_y");
+            this.rewardEntry.remove("magic_circle_size");
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -306,6 +342,17 @@ public final class LetterRewardEditorScreen extends Screen {
         return this.rewardEntry.has(key) && this.rewardEntry.get(key).isJsonPrimitive()
                 ? this.rewardEntry.get(key).getAsString()
                 : fallback;
+    }
+
+    private static int getInt(JsonObject object, String key, int fallback) {
+        if (!object.has(key) || !object.get(key).isJsonPrimitive()) {
+            return fallback;
+        }
+        try {
+            return object.get(key).getAsInt();
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
     }
 
     private static @Nullable Integer parseColor(String raw) {
@@ -332,6 +379,89 @@ public final class LetterRewardEditorScreen extends Screen {
         return String.format("#%06X", rgb & 0xFFFFFF);
     }
 
+    private int writableLeft() {
+        return this.letterLeft + 17;
+    }
+
+    private int writableTop() {
+        return this.letterTop + 21;
+    }
+
+    private int circleScreenX() {
+        return writableLeft() + this.magicCircleX;
+    }
+
+    private int circleScreenY() {
+        return writableTop() + this.magicCircleY;
+    }
+
+    private int circleCenterScreenX() {
+        return circleScreenX() + this.magicCircleSize / 2;
+    }
+
+    private int circleCenterScreenY() {
+        return circleScreenY() + this.magicCircleSize / 2;
+    }
+
+    private static boolean isInsideHandle(double mouseX, double mouseY, int centerX, int centerY) {
+        return mouseX >= centerX - HANDLE_RADIUS
+                && mouseX <= centerX + HANDLE_RADIUS
+                && mouseY >= centerY - HANDLE_RADIUS
+                && mouseY <= centerY + HANDLE_RADIUS;
+    }
+
+    private void beginMove(double mouseX, double mouseY) {
+        this.circleDragMode = CircleDragMode.MOVE;
+        this.moveGrabOffsetX = mouseX - circleCenterScreenX();
+        this.moveGrabOffsetY = mouseY - circleCenterScreenY();
+        this.setFocused(null);
+    }
+
+    private void beginResize() {
+        this.circleDragMode = CircleDragMode.RESIZE;
+        this.resizeCenterX = this.magicCircleX + this.magicCircleSize / 2.0;
+        this.resizeCenterY = this.magicCircleY + this.magicCircleSize / 2.0;
+        this.setFocused(null);
+    }
+
+    private void dragMove(double mouseX, double mouseY) {
+        double localCenterX = mouseX - writableLeft() - this.moveGrabOffsetX;
+        double localCenterY = mouseY - writableTop() - this.moveGrabOffsetY;
+        int nextX = (int) Math.round(localCenterX - this.magicCircleSize / 2.0);
+        int nextY = (int) Math.round(localCenterY - this.magicCircleSize / 2.0);
+        this.magicCircleX = QuestMagicCircle.clampX(nextX, this.magicCircleSize);
+        this.magicCircleY = QuestMagicCircle.clampY(nextY, this.magicCircleSize);
+    }
+
+    private void dragResize(double mouseX, double mouseY) {
+        double localX = mouseX - writableLeft();
+        double localY = mouseY - writableTop();
+        int requestedSize = (int) Math.round(2.0 * Math.max(
+                Math.abs(localX - this.resizeCenterX),
+                Math.abs(localY - this.resizeCenterY)
+        ));
+
+        int maxCenteredSize = (int) Math.floor(2.0 * Math.min(
+                Math.min(this.resizeCenterX, QuestMagicCircle.WRITABLE_WIDTH - this.resizeCenterX),
+                Math.min(this.resizeCenterY, QuestMagicCircle.WRITABLE_HEIGHT - this.resizeCenterY)
+        ));
+        int effectiveMax = Math.max(
+                QuestMagicCircle.MIN_SIZE,
+                Math.min(QuestMagicCircle.MAX_SIZE, maxCenteredSize)
+        );
+        int nextSize = Math.max(QuestMagicCircle.MIN_SIZE, Math.min(effectiveMax, requestedSize));
+
+        this.magicCircleSize = QuestMagicCircle.clampSize(nextSize);
+        this.magicCircleX = QuestMagicCircle.clampX(
+                (int) Math.round(this.resizeCenterX - this.magicCircleSize / 2.0),
+                this.magicCircleSize
+        );
+        this.magicCircleY = QuestMagicCircle.clampY(
+                (int) Math.round(this.resizeCenterY - this.magicCircleSize / 2.0),
+                this.magicCircleSize
+        );
+    }
+
     @Override
     public void onClose() {
         if (this.minecraft != null) {
@@ -341,11 +471,47 @@ public final class LetterRewardEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.magicCircle) {
+            if (isInsideHandle(mouseX, mouseY, circleScreenX(), circleScreenY())) {
+                beginResize();
+                return true;
+            }
+
+            if (isInsideHandle(mouseX, mouseY, circleCenterScreenX(), circleCenterScreenY())) {
+                beginMove(mouseX, mouseY);
+                return true;
+            }
+        }
+
         if (this.getFocused() instanceof TextBox box
                 && box.formattingToolbarMouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button == 0 && this.magicCircle) {
+            if (this.circleDragMode == CircleDragMode.MOVE) {
+                dragMove(mouseX, mouseY);
+                return true;
+            }
+            if (this.circleDragMode == CircleDragMode.RESIZE) {
+                dragResize(mouseX, mouseY);
+                return true;
+            }
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.circleDragMode != CircleDragMode.NONE) {
+            this.circleDragMode = CircleDragMode.NONE;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -376,11 +542,12 @@ public final class LetterRewardEditorScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
 
         if (this.magicCircle) {
-            MagicCircleTexture.render(
-                    graphics,
-                    this.letterLeft + 17 + 142 - MagicCircleTexture.DISPLAY_SIZE - 3,
-                    this.letterTop + 21 + 144 - MagicCircleTexture.DISPLAY_SIZE - 3
-            );
+            int x = circleScreenX();
+            int y = circleScreenY();
+            int size = this.magicCircleSize;
+
+            MagicCircleTexture.render(graphics, x, y, size);
+            drawCircleEditorOverlay(graphics, x, y, size);
         }
 
         graphics.drawCenteredString(
@@ -465,5 +632,54 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.letterTop + 194,
                 0xFFB8B8B8
         );
+
+        if (this.magicCircle) {
+            graphics.drawCenteredString(
+                    this.font,
+                    Component.translatable("questlog_envelope.editor.magic_circle.drag_hint"),
+                    this.letterLeft + 88,
+                    this.letterTop + 204,
+                    0xFFB8B8B8
+            );
+        }
+    }
+
+    private void drawCircleEditorOverlay(GuiGraphics graphics, int x, int y, int size) {
+        int edgeColor = 0xA0FFFFFF;
+        graphics.fill(x - 1, y - 1, x + size + 1, y, edgeColor);
+        graphics.fill(x - 1, y + size, x + size + 1, y + size + 1, edgeColor);
+        graphics.fill(x - 1, y, x, y + size, edgeColor);
+        graphics.fill(x + size, y, x + size + 1, y + size, edgeColor);
+
+        drawHandle(graphics, x, y, false);
+        drawHandle(graphics, x + size / 2, y + size / 2, true);
+    }
+
+    private static void drawHandle(GuiGraphics graphics, int centerX, int centerY, boolean centerHandle) {
+        graphics.fill(
+                centerX - HANDLE_RADIUS - 1,
+                centerY - HANDLE_RADIUS - 1,
+                centerX + HANDLE_RADIUS + 2,
+                centerY + HANDLE_RADIUS + 2,
+                0xD0000000
+        );
+        graphics.fill(
+                centerX - HANDLE_RADIUS,
+                centerY - HANDLE_RADIUS,
+                centerX + HANDLE_RADIUS + 1,
+                centerY + HANDLE_RADIUS + 1,
+                0xE0FFFFFF
+        );
+        if (centerHandle) {
+            graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2, 0xFF202020);
+        } else {
+            graphics.fill(centerX - 2, centerY - 2, centerX + 1, centerY + 1, 0xFF202020);
+        }
+    }
+
+    private enum CircleDragMode {
+        NONE,
+        MOVE,
+        RESIZE
     }
 }
