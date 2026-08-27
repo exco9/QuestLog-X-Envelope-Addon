@@ -12,23 +12,16 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Optional;
 
-/** Client-side renderer for the magic-circle artwork. */
+/** Client-side renderer for the resource-pack-friendly magic-circle artwork. */
 @Environment(EnvType.CLIENT)
 public final class MagicCircleTexture {
     public static final int DISPLAY_SIZE = QuestMagicCircle.DEFAULT_SIZE;
 
-    /** Preferred real resource path. A resource pack can override this directly. */
+    /** Resource packs can replace this PNG without touching any Java code. */
     public static final ResourceLocation ASSET_TEXTURE = QuestlogEnvelope.id("textures/gui/magic_circle.png");
-
-    /** Text fallback kept only until/when a raw PNG is supplied in the repository. */
-    private static final ResourceLocation FALLBACK_BASE64 = QuestlogEnvelope.id("textures/gui/magic_circle.png.b64");
 
     private static final ResourceLocation RUNTIME_TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle");
     private static final ResourceLocation RUNTIME_MASK_TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle_mask");
@@ -84,7 +77,7 @@ public final class MagicCircleTexture {
         RenderSystem.disableBlend();
     }
 
-    /** Short activation pulse; the permanent final state is still the exact configured color. */
+    /** Short activation pulse; the permanent final state remains the configured color. */
     public static void renderGlow(
             GuiGraphics graphics,
             int x,
@@ -162,34 +155,15 @@ public final class MagicCircleTexture {
     }
 
     private static NativeImage loadSourceImage() {
-        Minecraft minecraft = Minecraft.getInstance();
-        Optional<Resource> preferred = minecraft.getResourceManager().getResource(ASSET_TEXTURE);
-        if (preferred.isPresent()) {
-            try (InputStream stream = preferred.get().open()) {
-                return NativeImage.read(stream);
-            } catch (IOException exception) {
-                throw new IllegalStateException("Unable to load magic-circle PNG resource", exception);
-            }
-        }
+        Resource resource = Minecraft.getInstance()
+                .getResourceManager()
+                .getResource(ASSET_TEXTURE)
+                .orElseThrow(() -> new IllegalStateException("Missing magic-circle resource: " + ASSET_TEXTURE));
 
-        Optional<Resource> fallback = minecraft.getResourceManager().getResource(FALLBACK_BASE64);
-        if (fallback.isEmpty()) {
-            throw new IllegalStateException(
-                    "Missing magic-circle resource: " + ASSET_TEXTURE + " (and fallback " + FALLBACK_BASE64 + ")"
-            );
-        }
-
-        try (InputStream stream = fallback.get().open()) {
-            String encoded = new String(stream.readAllBytes(), StandardCharsets.UTF_8)
-                    .replace("\r", "")
-                    .replace("\n", "")
-                    .trim();
-            byte[] png = Base64.getDecoder().decode(encoded);
-            try (ByteArrayInputStream pngStream = new ByteArrayInputStream(png)) {
-                return NativeImage.read(pngStream);
-            }
-        } catch (IOException | IllegalArgumentException exception) {
-            throw new IllegalStateException("Unable to load fallback magic-circle resource", exception);
+        try (InputStream stream = resource.open()) {
+            return NativeImage.read(stream);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to load magic-circle PNG resource", exception);
         }
     }
 
