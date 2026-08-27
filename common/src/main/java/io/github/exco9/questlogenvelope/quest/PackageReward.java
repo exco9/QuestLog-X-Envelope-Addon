@@ -3,7 +3,6 @@ package io.github.exco9.questlogenvelope.quest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import io.github.exco9.questlogenvelope.mail.QuestMagicSeal;
 import io.github.exco9.questlogenvelope.mail.QuestMailDelivery;
 import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
 import io.github.exco9.questlogenvelope.mail.QuestMailSeal;
@@ -30,7 +29,6 @@ public final class PackageReward extends Reward {
     private final String title;
     private final JsonArray packageDefinitions;
     private final JsonArray legacyItemDefinitions;
-    private final boolean magicSeal;
 
     public PackageReward(JsonObject definition) {
         super(definition);
@@ -38,9 +36,6 @@ public final class PackageReward extends Reward {
         grantsQuestId = getOptionalId(definition, "grants_quest");
         sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Package";
-        magicSeal = definition.has("magic_seal")
-                && definition.get("magic_seal").isJsonPrimitive()
-                && definition.get("magic_seal").getAsBoolean();
 
         packageDefinitions = definition.has("packages") && definition.get("packages").isJsonArray()
                 ? definition.getAsJsonArray("packages").deepCopy()
@@ -60,19 +55,13 @@ public final class PackageReward extends Reward {
                         .get());
             }
 
-            boolean useMagicSeal = magicSeal && grantsQuestId != null && sealSymbolId != null;
-
             for (int index = 0; index < packages.size(); index++) {
                 ItemStack packageStack = QuestMailSeal.apply(player, packages.get(index), sealSymbolId);
 
-                // One reward should progress the target quest only once, even if
-                // the configured contents produce several physical packages.
+                // Wax seals are purely Envelope seals. Quest progression on package
+                // delivery remains the normal mail marker behavior.
                 if (index == 0 && grantsQuestId != null) {
-                    if (useMagicSeal) {
-                        QuestMagicSeal.attach(packageStack, player, grantsQuestId);
-                    } else {
-                        QuestMailMarker.set(packageStack, grantsQuestId);
-                    }
+                    QuestMailMarker.set(packageStack, grantsQuestId);
                 }
 
                 try {
