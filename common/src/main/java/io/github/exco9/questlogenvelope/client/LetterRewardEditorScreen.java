@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 /** Questlog letter editor using Envelope's native paper and formatting UI. */
 public final class LetterRewardEditorScreen extends Screen {
     private static final int HANDLE_RADIUS = 4;
+    private static final int SNAP_GRID = 4;
 
     private final Screen parent;
     private final JsonObject rewardEntry;
@@ -28,6 +30,8 @@ public final class LetterRewardEditorScreen extends Screen {
     private EditBox letterTitleBox;
     private EditBox magicCircleColorBox;
     private EditBox magicCircleCommandBox;
+    private EditBox magicCircleHoldBox;
+    private Button magicCircleResetButton;
     private TextBox textBox;
     private boolean autoClaim;
     private boolean magicCircle;
@@ -79,9 +83,9 @@ public final class LetterRewardEditorScreen extends Screen {
         int letterWidth = 176;
         int letterHeight = 192;
         int panelHeight = 264;
-        this.panelWidth = 190;
+        this.panelWidth = 210;
         int gap = 12;
-        int totalWidth = letterWidth + gap + panelWidth;
+        int totalWidth = letterWidth + gap + this.panelWidth;
         int top = Math.max(4, (this.height - panelHeight) / 2);
 
         this.letterLeft = Math.max(4, (this.width - totalWidth) / 2);
@@ -89,8 +93,8 @@ public final class LetterRewardEditorScreen extends Screen {
         this.panelX = this.letterLeft + letterWidth + gap;
         this.panelY = top;
 
-        if (this.panelX + panelWidth > this.width - 4) {
-            this.panelX = Math.max(4, this.width - panelWidth - 4);
+        if (this.panelX + this.panelWidth > this.width - 4) {
+            this.panelX = Math.max(4, this.width - this.panelWidth - 4);
             this.letterLeft = 4;
         }
 
@@ -143,7 +147,32 @@ public final class LetterRewardEditorScreen extends Screen {
             this.circleDragMode = CircleDragMode.NONE;
             button.setMessage(magicCircleLabel());
             updateMagicCircleFields();
-        }).bounds(this.panelX, this.panelY + 111, this.panelWidth, 18).build());
+        }).bounds(this.panelX, this.panelY + 111, 126, 18).build());
+
+        this.magicCircleHoldBox = new EditBox(
+                this.font,
+                this.panelX + 130,
+                this.panelY + 111,
+                44,
+                18,
+                Component.translatable("questlog_envelope.editor.magic_circle.hold")
+        );
+        this.magicCircleHoldBox.setMaxLength(5);
+        this.magicCircleHoldBox.setValue(formatHoldSeconds(getDouble(
+                this.rewardEntry,
+                "magic_circle_hold_seconds",
+                QuestMagicCircle.DEFAULT_HOLD_MILLIS / 1000.0
+        )));
+        this.magicCircleHoldBox.setHint(Component.literal("3.0"));
+        this.addRenderableWidget(this.magicCircleHoldBox);
+
+        this.magicCircleResetButton = this.addRenderableWidget(Button.builder(
+                Component.literal("↺"),
+                button -> resetMagicCircleLayout()
+        ).bounds(this.panelX + 178, this.panelY + 111, 32, 18).build());
+        this.magicCircleResetButton.setTooltip(Tooltip.create(
+                Component.translatable("questlog_envelope.editor.magic_circle.reset_layout")
+        ));
 
         this.magicCircleColorBox = new EditBox(
                 this.font,
@@ -224,6 +253,13 @@ public final class LetterRewardEditorScreen extends Screen {
         String command = this.magicCircleCommandBox == null
                 ? getString("magic_circle_command", "")
                 : this.magicCircleCommandBox.getValue();
+        String hold = this.magicCircleHoldBox == null
+                ? formatHoldSeconds(getDouble(
+                        this.rewardEntry,
+                        "magic_circle_hold_seconds",
+                        QuestMagicCircle.DEFAULT_HOLD_MILLIS / 1000.0
+                ))
+                : this.magicCircleHoldBox.getValue();
 
         this.circleDragMode = CircleDragMode.NONE;
         super.resize(minecraft, width, height);
@@ -234,6 +270,7 @@ public final class LetterRewardEditorScreen extends Screen {
         this.letterTitleBox.setValue(title);
         this.magicCircleColorBox.setValue(color);
         this.magicCircleCommandBox.setValue(command);
+        this.magicCircleHoldBox.setValue(hold);
     }
 
     private Component autoClaimLabel() {
@@ -257,6 +294,19 @@ public final class LetterRewardEditorScreen extends Screen {
         if (this.magicCircleCommandBox != null) {
             this.magicCircleCommandBox.active = this.magicCircle;
         }
+        if (this.magicCircleHoldBox != null) {
+            this.magicCircleHoldBox.active = this.magicCircle;
+        }
+        if (this.magicCircleResetButton != null) {
+            this.magicCircleResetButton.active = this.magicCircle;
+        }
+    }
+
+    private void resetMagicCircleLayout() {
+        this.circleDragMode = CircleDragMode.NONE;
+        this.magicCircleSize = QuestMagicCircle.DEFAULT_SIZE;
+        this.magicCircleX = QuestMagicCircle.defaultX(this.magicCircleSize);
+        this.magicCircleY = QuestMagicCircle.defaultY(this.magicCircleSize);
     }
 
     private void saveAndClose() {
@@ -305,6 +355,18 @@ public final class LetterRewardEditorScreen extends Screen {
                 return;
             }
 
+            @Nullable Double holdSeconds = parseHoldSeconds(this.magicCircleHoldBox.getValue());
+            if (holdSeconds == null
+                    || holdSeconds * 1000.0 < QuestMagicCircle.MIN_HOLD_MILLIS
+                    || holdSeconds * 1000.0 > QuestMagicCircle.MAX_HOLD_MILLIS) {
+                this.validationError = Component.translatable(
+                        "questlog_envelope.editor.magic_circle.invalid_hold",
+                        formatHoldSeconds(QuestMagicCircle.MIN_HOLD_MILLIS / 1000.0),
+                        formatHoldSeconds(QuestMagicCircle.MAX_HOLD_MILLIS / 1000.0)
+                );
+                return;
+            }
+
             this.magicCircleSize = QuestMagicCircle.clampSize(this.magicCircleSize);
             this.magicCircleX = QuestMagicCircle.clampX(this.magicCircleX, this.magicCircleSize);
             this.magicCircleY = QuestMagicCircle.clampY(this.magicCircleY, this.magicCircleSize);
@@ -314,6 +376,7 @@ public final class LetterRewardEditorScreen extends Screen {
             this.rewardEntry.addProperty("magic_circle_x", this.magicCircleX);
             this.rewardEntry.addProperty("magic_circle_y", this.magicCircleY);
             this.rewardEntry.addProperty("magic_circle_size", this.magicCircleSize);
+            this.rewardEntry.addProperty("magic_circle_hold_seconds", holdSeconds);
 
             String command = this.magicCircleCommandBox.getValue().trim();
             if (command.isEmpty()) {
@@ -328,6 +391,7 @@ public final class LetterRewardEditorScreen extends Screen {
             this.rewardEntry.remove("magic_circle_x");
             this.rewardEntry.remove("magic_circle_y");
             this.rewardEntry.remove("magic_circle_size");
+            this.rewardEntry.remove("magic_circle_hold_seconds");
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -355,6 +419,17 @@ public final class LetterRewardEditorScreen extends Screen {
         }
     }
 
+    private static double getDouble(JsonObject object, String key, double fallback) {
+        if (!object.has(key) || !object.get(key).isJsonPrimitive()) {
+            return fallback;
+        }
+        try {
+            return object.get(key).getAsDouble();
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
+    }
+
     private static @Nullable Integer parseColor(String raw) {
         String value = raw == null ? "" : raw.trim();
         if (value.isEmpty()) {
@@ -375,8 +450,28 @@ public final class LetterRewardEditorScreen extends Screen {
         }
     }
 
+    private static @Nullable Double parseHoldSeconds(String raw) {
+        String value = raw == null ? "" : raw.trim().replace(',', '.');
+        if (value.isEmpty()) {
+            return QuestMagicCircle.DEFAULT_HOLD_MILLIS / 1000.0;
+        }
+        try {
+            double seconds = Double.parseDouble(value);
+            return Double.isFinite(seconds) ? seconds : null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
     private static String formatColor(int rgb) {
         return String.format("#%06X", rgb & 0xFFFFFF);
+    }
+
+    private static String formatHoldSeconds(double seconds) {
+        if (Math.abs(seconds - Math.rint(seconds)) < 0.0001) {
+            return String.format("%.1f", seconds);
+        }
+        return String.format("%.2f", seconds).replaceAll("0+$", "").replaceAll("\\.$", ".0");
     }
 
     private int writableLeft() {
@@ -429,6 +524,12 @@ public final class LetterRewardEditorScreen extends Screen {
         double localCenterY = mouseY - writableTop() - this.moveGrabOffsetY;
         int nextX = (int) Math.round(localCenterX - this.magicCircleSize / 2.0);
         int nextY = (int) Math.round(localCenterY - this.magicCircleSize / 2.0);
+
+        if (Screen.hasShiftDown()) {
+            nextX = snap(nextX, SNAP_GRID);
+            nextY = snap(nextY, SNAP_GRID);
+        }
+
         this.magicCircleX = QuestMagicCircle.clampX(nextX, this.magicCircleSize);
         this.magicCircleY = QuestMagicCircle.clampY(nextY, this.magicCircleSize);
     }
@@ -440,6 +541,9 @@ public final class LetterRewardEditorScreen extends Screen {
                 Math.abs(localX - this.resizeCenterX),
                 Math.abs(localY - this.resizeCenterY)
         ));
+        if (Screen.hasShiftDown()) {
+            requestedSize = snap(requestedSize, SNAP_GRID);
+        }
 
         int maxCenteredSize = (int) Math.floor(2.0 * Math.min(
                 Math.min(this.resizeCenterX, QuestMagicCircle.WRITABLE_WIDTH - this.resizeCenterX),
@@ -460,6 +564,10 @@ public final class LetterRewardEditorScreen extends Screen {
                 (int) Math.round(this.resizeCenterY - this.magicCircleSize / 2.0),
                 this.magicCircleSize
         );
+    }
+
+    private static int snap(int value, int grid) {
+        return (int) Math.round(value / (double) grid) * grid;
     }
 
     @Override
@@ -547,7 +655,7 @@ public final class LetterRewardEditorScreen extends Screen {
             int size = this.magicCircleSize;
 
             MagicCircleTexture.render(graphics, x, y, size);
-            drawCircleEditorOverlay(graphics, x, y, size);
+            drawCircleEditorOverlay(graphics, x, y, size, mouseX, mouseY);
         }
 
         graphics.drawCenteredString(
@@ -641,21 +749,62 @@ public final class LetterRewardEditorScreen extends Screen {
                     this.letterTop + 204,
                     0xFFB8B8B8
             );
+            renderMagicCircleTooltips(graphics, mouseX, mouseY);
         }
     }
 
-    private void drawCircleEditorOverlay(GuiGraphics graphics, int x, int y, int size) {
+    private void drawCircleEditorOverlay(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int size,
+            int mouseX,
+            int mouseY
+    ) {
         int edgeColor = 0xA0FFFFFF;
         graphics.fill(x - 1, y - 1, x + size + 1, y, edgeColor);
         graphics.fill(x - 1, y + size, x + size + 1, y + size + 1, edgeColor);
         graphics.fill(x - 1, y, x, y + size, edgeColor);
         graphics.fill(x + size, y, x + size + 1, y + size, edgeColor);
 
-        drawHandle(graphics, x, y, false);
-        drawHandle(graphics, x + size / 2, y + size / 2, true);
+        boolean resizeHovered = isInsideHandle(mouseX, mouseY, x, y);
+        boolean moveHovered = isInsideHandle(mouseX, mouseY, x + size / 2, y + size / 2);
+        drawHandle(
+                graphics,
+                x,
+                y,
+                false,
+                resizeHovered || this.circleDragMode == CircleDragMode.RESIZE
+        );
+        drawHandle(
+                graphics,
+                x + size / 2,
+                y + size / 2,
+                true,
+                moveHovered || this.circleDragMode == CircleDragMode.MOVE
+        );
+
+        if (this.circleDragMode == CircleDragMode.RESIZE) {
+            Component value = Component.translatable(
+                    "questlog_envelope.editor.magic_circle.size_value",
+                    this.magicCircleSize,
+                    this.magicCircleSize
+            );
+            int textWidth = this.font.width(value);
+            int labelX = x + size / 2 - textWidth / 2;
+            int labelY = Math.max(this.letterTop + 3, y - 12);
+            graphics.fill(labelX - 3, labelY - 2, labelX + textWidth + 3, labelY + 10, 0xB0000000);
+            graphics.drawString(this.font, value, labelX, labelY, 0xFFFFFF, false);
+        }
     }
 
-    private static void drawHandle(GuiGraphics graphics, int centerX, int centerY, boolean centerHandle) {
+    private static void drawHandle(
+            GuiGraphics graphics,
+            int centerX,
+            int centerY,
+            boolean centerHandle,
+            boolean highlighted
+    ) {
         graphics.fill(
                 centerX - HANDLE_RADIUS - 1,
                 centerY - HANDLE_RADIUS - 1,
@@ -668,12 +817,51 @@ public final class LetterRewardEditorScreen extends Screen {
                 centerY - HANDLE_RADIUS,
                 centerX + HANDLE_RADIUS + 1,
                 centerY + HANDLE_RADIUS + 1,
-                0xE0FFFFFF
+                highlighted ? 0xFFFFD86A : 0xE0FFFFFF
         );
         if (centerHandle) {
             graphics.fill(centerX - 1, centerY - 1, centerX + 2, centerY + 2, 0xFF202020);
         } else {
             graphics.fill(centerX - 2, centerY - 2, centerX + 1, centerY + 1, 0xFF202020);
+        }
+    }
+
+    private void renderMagicCircleTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (this.circleDragMode != CircleDragMode.NONE) {
+            return;
+        }
+
+        if (isInsideHandle(mouseX, mouseY, circleScreenX(), circleScreenY())) {
+            graphics.renderTooltip(
+                    this.font,
+                    Component.translatable("questlog_envelope.editor.magic_circle.resize_handle"),
+                    mouseX,
+                    mouseY
+            );
+            return;
+        }
+
+        if (isInsideHandle(mouseX, mouseY, circleCenterScreenX(), circleCenterScreenY())) {
+            graphics.renderTooltip(
+                    this.font,
+                    Component.translatable("questlog_envelope.editor.magic_circle.move_handle"),
+                    mouseX,
+                    mouseY
+            );
+            return;
+        }
+
+        if (this.magicCircleHoldBox != null && this.magicCircleHoldBox.isMouseOver(mouseX, mouseY)) {
+            graphics.renderTooltip(
+                    this.font,
+                    Component.translatable(
+                            "questlog_envelope.editor.magic_circle.hold_tooltip",
+                            formatHoldSeconds(QuestMagicCircle.MIN_HOLD_MILLIS / 1000.0),
+                            formatHoldSeconds(QuestMagicCircle.MAX_HOLD_MILLIS / 1000.0)
+                    ),
+                    mouseX,
+                    mouseY
+            );
         }
     }
 
