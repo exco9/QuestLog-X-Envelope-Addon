@@ -67,9 +67,10 @@ public abstract class LetterViewScreenMixin {
             return;
         }
 
+        int size = questlogEnvelope$circleSize();
         int x = questlogEnvelope$circleX();
         int y = questlogEnvelope$circleY();
-        MagicCircleTexture.render(graphics, x, y);
+        MagicCircleTexture.render(graphics, x, y, size);
 
         if (!this.questlogEnvelope$holdingCircle) {
             return;
@@ -93,6 +94,7 @@ public abstract class LetterViewScreenMixin {
                 graphics,
                 x,
                 y,
+                size,
                 progress,
                 QuestMagicCircle.getColor(this.letter.getItemStack())
         );
@@ -129,23 +131,29 @@ public abstract class LetterViewScreenMixin {
     }
 
     @Unique
+    private int questlogEnvelope$circleSize() {
+        return QuestMagicCircle.getSize(this.letter.getItemStack());
+    }
+
+    @Unique
     private int questlogEnvelope$circleX() {
-        return this.leftPos + 17 + 142 - MagicCircleTexture.DISPLAY_SIZE - 3;
+        return this.leftPos + 17 + QuestMagicCircle.getXOffset(this.letter.getItemStack());
     }
 
     @Unique
     private int questlogEnvelope$circleY() {
-        return this.topPos + 21 + 144 - MagicCircleTexture.DISPLAY_SIZE - 3;
+        return this.topPos + 21 + QuestMagicCircle.getYOffset(this.letter.getItemStack());
     }
 
     @Unique
     private boolean questlogEnvelope$isInsideCircle(double mouseX, double mouseY) {
         int x = questlogEnvelope$circleX();
         int y = questlogEnvelope$circleY();
+        int size = questlogEnvelope$circleSize();
         return mouseX >= x
-                && mouseX < x + MagicCircleTexture.DISPLAY_SIZE
+                && mouseX < x + size
                 && mouseY >= y
-                && mouseY < y + MagicCircleTexture.DISPLAY_SIZE;
+                && mouseY < y + size;
     }
 
     @Unique
