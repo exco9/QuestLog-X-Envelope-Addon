@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-/** Compact native-Envelope wax seal selector for reward entries. */
+/** Compact native-Envelope seal selector for reward entries. */
 public final class SealPickerScreen extends Screen {
     private final Screen parent;
     private final JsonObject rewardEntry;
@@ -26,7 +26,7 @@ public final class SealPickerScreen extends Screen {
     @Override
     protected void init() {
         int centerX = this.width / 2;
-        int top = Math.max(20, this.height / 2 - 70);
+        int top = Math.max(20, this.height / 2 - 88);
 
         this.addRenderableWidget(Button.builder(
                 Component.literal("<"),
@@ -34,7 +34,7 @@ public final class SealPickerScreen extends Screen {
         ).bounds(centerX - 92, top + 46, 38, 20).build());
 
         this.addRenderableWidget(Button.builder(
-                Component.translatable("questlog_envelope.editor.seal.none"),
+                Component.translatable("questlog_envelope.editor.seal.reset"),
                 button -> this.selection.clear()
         ).bounds(centerX - 48, top + 46, 96, 20).build());
 
@@ -46,12 +46,12 @@ public final class SealPickerScreen extends Screen {
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.cancel"),
                 button -> onClose()
-        ).bounds(centerX - 92, top + 108, 88, 20).build());
+        ).bounds(centerX - 92, top + 144, 88, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 button -> saveAndClose()
-        ).bounds(centerX + 4, top + 108, 88, 20).build());
+        ).bounds(centerX + 4, top + 144, 88, 20).build());
     }
 
     private void saveAndClose() {
@@ -62,7 +62,8 @@ public final class SealPickerScreen extends Screen {
             this.rewardEntry.addProperty("seal", seal.toString());
         }
 
-        // Legacy field from the old, incorrect wax-seal implementation.
+        // Old development builds tied magic behavior to Envelope wax seals.
+        // Always discard that obsolete flag when this picker saves.
         this.rewardEntry.remove("magic_seal");
 
         if (this.minecraft != null) {
@@ -81,8 +82,8 @@ public final class SealPickerScreen extends Screen {
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderTransparentBackground(graphics);
         int centerX = this.width / 2;
-        int top = Math.max(20, this.height / 2 - 70);
-        graphics.fill(centerX - 104, top - 10, centerX + 104, top + 140, 0xD0101010);
+        int top = Math.max(20, this.height / 2 - 88);
+        graphics.fill(centerX - 104, top - 10, centerX + 104, top + 176, 0xD0101010);
     }
 
     @Override
@@ -90,7 +91,7 @@ public final class SealPickerScreen extends Screen {
         super.render(graphics, mouseX, mouseY, partialTick);
 
         int centerX = this.width / 2;
-        int top = Math.max(20, this.height / 2 - 70);
+        int top = Math.max(20, this.height / 2 - 88);
         graphics.drawCenteredString(this.font, this.title, centerX, top, 0xFFFFFF);
 
         this.selection.renderPreview(graphics, centerX - 15, top + 12);
