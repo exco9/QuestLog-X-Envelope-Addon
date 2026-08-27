@@ -33,6 +33,13 @@ public final class MagicCircleTexture {
     private MagicCircleTexture() {
     }
 
+    /** Forces the source artwork and generated tint mask to be rebuilt after a resource reload. */
+    public static void invalidate() {
+        registered = false;
+        sourceWidth = 65;
+        sourceHeight = 65;
+    }
+
     public static void render(GuiGraphics graphics, int x, int y) {
         render(graphics, x, y, DISPLAY_SIZE);
     }
