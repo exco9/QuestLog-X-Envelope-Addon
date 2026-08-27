@@ -6,6 +6,8 @@
 
   "questlog_envelope.editor.seal": "Sceau : %s",
   "questlog_envelope.editor.seal.none": "Réinitialiser",
+  "questlog_envelope.editor.seal.reset": "Réinitialiser",
+  "questlog_envelope.editor.seal.empty": "Aucun",
   "questlog_envelope.editor.seal.button": "Sceau",
   "questlog_envelope.editor.seal.title": "Choisir un sceau Envelope",
   "questlog_envelope.editor.magic_circle": "Cercle magique : %s",
