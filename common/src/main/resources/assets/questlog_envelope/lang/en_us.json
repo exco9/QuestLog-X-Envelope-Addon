@@ -8,9 +8,9 @@
   "questlog_envelope.editor.seal.none": "None",
   "questlog_envelope.editor.seal.button": "Seal",
   "questlog_envelope.editor.seal.title": "Choose Envelope seal",
-  "questlog_envelope.editor.magic_seal": "Magic seal: %s",
-  "questlog_envelope.editor.magic_seal.hint": "Triggers the linked quest when the seal is broken",
-  "questlog_envelope.magic_seal.accepted": "The magic seal confirmed your participation.",
+  "questlog_envelope.editor.magic_circle": "Magic circle: %s",
+  "questlog_envelope.magic_circle.activated": "The magic circle has been activated.",
+  "questlog_envelope.magic_circle.already_used": "This magic circle has already been used.",
 
   "questlog_envelope.editor.letter.options": "Envelope Letter Options...",
   "questlog_envelope.editor.letter.title": "Envelope Letter Options",
