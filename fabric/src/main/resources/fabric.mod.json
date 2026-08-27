@@ -9,6 +9,9 @@
   "entrypoints": {
     "main": [
       "io.github.exco9.questlogenvelope.fabric.QuestlogEnvelopeFabric"
+    ],
+    "client": [
+      "io.github.exco9.questlogenvelope.fabric.QuestlogEnvelopeFabricClient"
     ]
   },
   "mixins": [
