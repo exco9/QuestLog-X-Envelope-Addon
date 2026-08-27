@@ -27,6 +27,7 @@ public final class LetterReward extends Reward {
     private final int magicCircleX;
     private final int magicCircleY;
     private final int magicCircleSize;
+    private final int magicCircleHoldMillis;
 
     public LetterReward(JsonObject definition) {
         super(definition);
@@ -52,6 +53,13 @@ public final class LetterReward extends Reward {
                 getInt(definition, "magic_circle_y", QuestMagicCircle.defaultY(magicCircleSize)),
                 magicCircleSize
         );
+        magicCircleHoldMillis = QuestMagicCircle.clampHoldMillis((int) Math.round(
+                getDouble(
+                        definition,
+                        "magic_circle_hold_seconds",
+                        QuestMagicCircle.DEFAULT_HOLD_MILLIS / 1000.0
+                ) * 1000.0
+        ));
     }
 
     @Override
@@ -69,7 +77,8 @@ public final class LetterReward extends Reward {
                     magicCircleColor,
                     magicCircleX,
                     magicCircleY,
-                    magicCircleSize
+                    magicCircleSize,
+                    magicCircleHoldMillis
             );
         } else if (grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
@@ -116,6 +125,17 @@ public final class LetterReward extends Reward {
         }
         try {
             return definition.get(key).getAsInt();
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
+    }
+
+    private static double getDouble(JsonObject definition, String key, double fallback) {
+        if (!definition.has(key) || !definition.get(key).isJsonPrimitive()) {
+            return fallback;
+        }
+        try {
+            return definition.get(key).getAsDouble();
         } catch (RuntimeException ignored) {
             return fallback;
         }
