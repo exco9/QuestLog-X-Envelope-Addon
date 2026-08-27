@@ -69,26 +69,29 @@ Add **Envelope Letter / Lettre Envelope** (`questlog_envelope:letter`) as a rewa
 
 **Envelope Letter Options...** reuses Envelope's own letter paper and `TextBox`. Select text to reveal Envelope's native formatting toolbar for bold, italic, underline, strikethrough and colors. The small reminder under the letter is kept specifically to make this behavior discoverable.
 
-A native Envelope wax seal can be selected from the built-in A–Z, 0–9 and emblem symbols.
+A native Envelope wax seal can be selected from the built-in A–Z, 0–9 and emblem symbols. Wax seals are normal Envelope seals and have no special QuestLog behavior.
 
-### Magic seals
+### Magic circles
 
-A sealed letter or package reward can enable **Magic seal / Sceau magique**.
+A letter reward can enable **Magic circle / Cercle magique** independently of its Envelope wax seal.
 
-When magic mode is disabled, `grants_quest` behaves normally and progresses the destination quest when the mail is delivered.
+The circle is drawn directly on the writable paper area using the addon artwork. It occupies roughly one seventh of the writable surface and is previewed directly in the letter reward editor.
 
-When magic mode is enabled, `grants_quest` is deliberately delayed. The player must hold right click long enough to break Envelope's physical seal. Only then does the addon validate the one-time action and progress the target quest.
+When the player later opens the delivered letter, holding the left mouse button on the circle for about three seconds activates it. Releasing early or moving the cursor away cancels the activation.
+
+Each generated circle is bound to the intended player's UUID and receives a unique persisted action ID. The server validates that ID against the letter the player is actually holding, so copying or duplicating the physical item cannot replay the same action.
+
+For the first implementation, the existing `grants_quest` field is the supported action. The circle action format is intentionally independent so command/custom-event actions can be added later without redesigning the UI or anti-replay system.
 
 ```text
 Quest reward created
-  -> sealed Envelope mail delivered
-  -> player holds right click
-  -> Envelope breaks the wax seal
-  -> addon validates recipient + unique action ID
-  -> grants_quest is applied
+  -> Envelope letter delivered
+  -> player opens the letter
+  -> player holds the magic circle for ~3 seconds
+  -> server validates recipient + unique action ID
+  -> linked action executes once
+  -> circle disappears from the letter
 ```
-
-Magic actions are bound to the intended player's UUID and carry a unique persisted action ID. Duplicating/copying the physical item therefore cannot replay the same quest progression. Arbitrary command execution is not part of the system.
 
 Example:
 
@@ -96,15 +99,14 @@ Example:
 {
   "type": "questlog_envelope:letter",
   "title": "Expedition invitation",
-  "text": "Break the seal if you accept the expedition.",
-  "seal": "envelope:heart",
-  "magic_seal": true,
+  "text": "Activate the circle if you accept the expedition.",
+  "magic_circle": true,
   "grants_quest": "example:expedition",
   "auto_claim": true
 }
 ```
 
-The target quest can use the existing `mail_received` prerequisite for that quest ID. With `magic_seal: true`, the matching marker is applied only when the seal is actually broken instead of at delivery time.
+A normal Envelope wax seal may still be added to the same letter with `"seal": "envelope:heart"`; sealing/unsealing and magic-circle activation are two separate mechanics.
 
 ### Send quest packages
 
@@ -112,7 +114,7 @@ Add **Envelope Package / Colis Envelope** (`questlog_envelope:package`) as a rew
 
 The visual editor uses Envelope's native six-slot package layout plus the player's current inventory. Clicking inventory stacks copies them into reward slots without modifying the real inventory. Additional package pages create additional physical packages.
 
-The adjacent **Seal / Sceau** button selects a native Envelope seal and also exposes the magic-seal toggle. When multiple physical packages are generated, only the first package carries the one-time `grants_quest` action.
+The adjacent **Seal / Sceau** button selects a native Envelope wax seal. Packages do not use the letter magic-circle mechanic; `grants_quest` on a package follows the normal delivery marker behavior.
 
 ## Delivery behavior
 
@@ -178,8 +180,8 @@ Implemented on `dev/initial-integration`:
 - offline persistence/replay for delivered quest markers;
 - Envelope letter and package rewards;
 - real Envelope red-wax seals with built-in symbol preview/selection;
-- magic seals that delay `grants_quest` until the recipient breaks the seal;
-- persistent anti-replay protection for magic-seal actions;
+- independent letter magic circles with editor preview and hold-to-activate interaction;
+- persistent recipient binding and anti-replay protection for magic-circle actions;
 - native Envelope letter formatting including bold/italic/underline/colors;
 - visual package editor with inventory copying and multiple six-slot pages;
 - express package delivery to registered mailboxes;
@@ -188,4 +190,4 @@ Implemented on `dev/initial-integration`:
 - safe sender fallback and non-blocking Questlog reward collection;
 - short localized type labels and English/French translations.
 
-Next steps are primarily testing/polish and any later service-reply or integration-test work.
+Next steps are primarily testing/polish and deciding which additional magic-circle action types should be exposed besides the current quest action.
