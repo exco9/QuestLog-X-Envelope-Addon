@@ -19,16 +19,27 @@ import java.util.UUID;
 public final class QuestMagicCircle {
     public static final int DEFAULT_COLOR = 0x55AAFF;
 
+    public static final int WRITABLE_WIDTH = 142;
+    public static final int WRITABLE_HEIGHT = 144;
+    public static final int DEFAULT_SIZE = 36;
+    public static final int MIN_SIZE = 16;
+    public static final int MAX_SIZE = 96;
+
+    private static final int DEFAULT_MARGIN = 3;
+
     private static final String ROOT_KEY = "questlog_envelope";
     private static final String CIRCLE_KEY = "magic_circle";
     private static final String ACTION_ID_KEY = "action_id";
     private static final String COLOR_KEY = "color";
+    private static final String X_KEY = "x";
+    private static final String Y_KEY = "y";
+    private static final String SIZE_KEY = "size";
 
     private QuestMagicCircle() {
     }
 
     /**
-     * Attaches only the action id and visual color to the physical item. The
+     * Attaches only the action id and visual settings to the physical item. The
      * executable action itself is stored server-side in MagicCircleSavedData.
      */
     public static ItemStack attach(
@@ -36,7 +47,10 @@ public final class QuestMagicCircle {
             ServerPlayer recipient,
             @Nullable ResourceLocation grantsQuestId,
             @Nullable String command,
-            int color
+            int color,
+            int x,
+            int y,
+            int size
     ) {
         UUID actionId = UUID.randomUUID();
         MagicCircleSavedData.get(recipient.serverLevel()).register(
@@ -46,6 +60,10 @@ public final class QuestMagicCircle {
                 normalizeCommand(command)
         );
 
+        int safeSize = clampSize(size);
+        int safeX = clampX(x, safeSize);
+        int safeY = clampY(y, safeSize);
+
         CompoundTag customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         CompoundTag addonData = customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)
                 ? customData.getCompound(ROOT_KEY)
@@ -54,6 +72,9 @@ public final class QuestMagicCircle {
         CompoundTag circle = new CompoundTag();
         circle.putUUID(ACTION_ID_KEY, actionId);
         circle.putInt(COLOR_KEY, color & 0xFFFFFF);
+        circle.putInt(X_KEY, safeX);
+        circle.putInt(Y_KEY, safeY);
+        circle.putInt(SIZE_KEY, safeSize);
         addonData.put(CIRCLE_KEY, circle);
         customData.put(ROOT_KEY, addonData);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
@@ -70,6 +91,42 @@ public final class QuestMagicCircle {
 
     public static int getColor(ItemStack stack) {
         return read(stack).map(CircleData::color).orElse(DEFAULT_COLOR);
+    }
+
+    public static int getXOffset(ItemStack stack) {
+        return read(stack).map(CircleData::x).orElse(defaultX(DEFAULT_SIZE));
+    }
+
+    public static int getYOffset(ItemStack stack) {
+        return read(stack).map(CircleData::y).orElse(defaultY(DEFAULT_SIZE));
+    }
+
+    public static int getSize(ItemStack stack) {
+        return read(stack).map(CircleData::size).orElse(DEFAULT_SIZE);
+    }
+
+    public static int defaultX(int size) {
+        int safeSize = clampSize(size);
+        return clampX(WRITABLE_WIDTH - safeSize - DEFAULT_MARGIN, safeSize);
+    }
+
+    public static int defaultY(int size) {
+        int safeSize = clampSize(size);
+        return clampY(WRITABLE_HEIGHT - safeSize - DEFAULT_MARGIN, safeSize);
+    }
+
+    public static int clampSize(int size) {
+        return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
+    }
+
+    public static int clampX(int x, int size) {
+        int safeSize = clampSize(size);
+        return Math.max(0, Math.min(WRITABLE_WIDTH - safeSize, x));
+    }
+
+    public static int clampY(int y, int size) {
+        int safeSize = clampSize(size);
+        return Math.max(0, Math.min(WRITABLE_HEIGHT - safeSize, y));
     }
 
     public static ActivationResult activate(ItemStack stack, ServerPlayer player, UUID requestedActionId) {
@@ -126,9 +183,6 @@ public final class QuestMagicCircle {
         }
 
         try {
-            // The command was registered from server-authored quest data and is
-            // looked up from SavedData, never accepted from the client. Keeping
-            // the player as command source makes selectors such as @s intuitive.
             CommandSourceStack source = player.createCommandSourceStack()
                     .withPermission(4)
                     .withSuppressedOutput();
@@ -207,7 +261,17 @@ public final class QuestMagicCircle {
         int color = circle.contains(COLOR_KEY, Tag.TAG_INT)
                 ? circle.getInt(COLOR_KEY) & 0xFFFFFF
                 : DEFAULT_COLOR;
-        return Optional.of(new CircleData(circle.getUUID(ACTION_ID_KEY), color));
+        int size = circle.contains(SIZE_KEY, Tag.TAG_INT)
+                ? clampSize(circle.getInt(SIZE_KEY))
+                : DEFAULT_SIZE;
+        int x = circle.contains(X_KEY, Tag.TAG_INT)
+                ? clampX(circle.getInt(X_KEY), size)
+                : defaultX(size);
+        int y = circle.contains(Y_KEY, Tag.TAG_INT)
+                ? clampY(circle.getInt(Y_KEY), size)
+                : defaultY(size);
+
+        return Optional.of(new CircleData(circle.getUUID(ACTION_ID_KEY), color, x, y, size));
     }
 
     public enum ActivationResult {
@@ -218,7 +282,7 @@ public final class QuestMagicCircle {
         NOT_THIS_ITEM
     }
 
-    private record CircleData(UUID actionId, int color) {
+    private record CircleData(UUID actionId, int color, int x, int y, int size) {
     }
 
     /** Keeps Questlog-specific progression out of the action storage class. */
