@@ -10,7 +10,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.InteractionHand;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -75,13 +74,7 @@ public abstract class LetterViewScreenMixin {
             return;
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
-        boolean leftButtonStillDown = GLFW.glfwGetMouseButton(
-                minecraft.getWindow().getWindow(),
-                GLFW.GLFW_MOUSE_BUTTON_LEFT
-        ) == GLFW.GLFW_PRESS;
-
-        if (!leftButtonStillDown || !questlogEnvelope$isInsideCircle(mouseX, mouseY)) {
+        if (!questlogEnvelope$isInsideCircle(mouseX, mouseY)) {
             questlogEnvelope$resetHold();
             return;
         }
@@ -89,16 +82,18 @@ public abstract class LetterViewScreenMixin {
         long elapsed = Math.max(0L, Util.getMillis() - this.questlogEnvelope$holdStartedAt);
         float progress = Math.min(1.0F, elapsed / (float) QUESTLOG_ENVELOPE$HOLD_TIME_MS);
 
-        int progressWidth = Math.round(MagicCircleTexture.DISPLAY_SIZE * progress);
-        graphics.fill(
+        // Replace the old progress bar with a second copy of the artwork that
+        // fills from bottom to top in the color configured by the quest author.
+        MagicCircleTexture.renderTintedFill(
+                graphics,
                 x,
-                y + MagicCircleTexture.DISPLAY_SIZE - 3,
-                x + progressWidth,
-                y + MagicCircleTexture.DISPLAY_SIZE,
-                0xD0FFFFFF
+                y,
+                progress,
+                QuestMagicCircle.getColor(this.letter.getItemStack())
         );
 
         if (progress >= 1.0F && !this.questlogEnvelope$activationSent && this.hand != null) {
+            Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.player != null && minecraft.player.connection != null) {
                 this.questlogEnvelope$activationSent = true;
                 minecraft.player.connection.sendCommand(
@@ -127,6 +122,19 @@ public abstract class LetterViewScreenMixin {
         this.questlogEnvelope$activationSent = false;
         this.questlogEnvelope$holdStartedAt = Util.getMillis();
         cir.setReturnValue(true);
+    }
+
+    @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true, remap = false)
+    private void questlogEnvelope$stopMagicCircleHold(
+            double mouseX,
+            double mouseY,
+            int button,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (button == 0 && this.questlogEnvelope$holdingCircle) {
+            questlogEnvelope$resetHold();
+            cir.setReturnValue(true);
+        }
     }
 
     @Unique
