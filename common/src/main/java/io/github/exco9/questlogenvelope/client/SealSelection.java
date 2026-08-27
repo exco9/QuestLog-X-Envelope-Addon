@@ -85,7 +85,7 @@ public final class SealSelection {
     public Component label() {
         ResourceLocation id = get();
         if (id == null) {
-            return Component.translatable("questlog_envelope.editor.seal.none");
+            return Component.translatable("questlog_envelope.editor.seal.empty");
         }
 
         String path = id.getPath();
