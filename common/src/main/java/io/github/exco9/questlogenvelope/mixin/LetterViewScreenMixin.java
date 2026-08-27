@@ -2,6 +2,7 @@ package io.github.exco9.questlogenvelope.mixin;
 
 import io.github.exco9.questlogenvelope.client.MagicCircleTexture;
 import io.github.exco9.questlogenvelope.mail.QuestMagicCircle;
+import io.github.exco9.questlogenvelope.network.MagicCircleNetworking;
 import io.github.mortuusars.envelope.client.gui.screen.LetterViewScreen;
 import io.github.mortuusars.envelope.util.ItemAndStack;
 import io.github.mortuusars.envelope.world.item.LetterItem;
@@ -27,7 +28,9 @@ import java.util.UUID;
 @Mixin(value = LetterViewScreen.class, remap = false)
 public abstract class LetterViewScreenMixin {
     @Unique
-    private static final long QUESTLOG_ENVELOPE$HOLD_TIME_MS = 3000L;
+    private static final long QUESTLOG_ENVELOPE$REQUEST_VISUAL_TIMEOUT_MS = 1500L;
+    @Unique
+    private static final long QUESTLOG_ENVELOPE$ACTIVATION_FLASH_MS = 550L;
 
     @Shadow(remap = false)
     @Final
@@ -51,10 +54,16 @@ public abstract class LetterViewScreenMixin {
     private boolean questlogEnvelope$activationSent;
 
     @Unique
-    private boolean questlogEnvelope$locallyActivated;
+    private boolean questlogEnvelope$wasActivated;
 
     @Unique
     private long questlogEnvelope$holdStartedAt;
+
+    @Unique
+    private long questlogEnvelope$activationRequestSentAt;
+
+    @Unique
+    private long questlogEnvelope$activationFlashStartedAt;
 
     @Inject(method = "render", at = @At("TAIL"), remap = false)
     private void questlogEnvelope$renderMagicCircle(
@@ -66,7 +75,7 @@ public abstract class LetterViewScreenMixin {
     ) {
         Optional<UUID> actionId = QuestMagicCircle.getActionId(this.letter.getItemStack());
         if (actionId.isEmpty()) {
-            questlogEnvelope$resetHold();
+            questlogEnvelope$resetAllState();
             return;
         }
 
@@ -74,16 +83,39 @@ public abstract class LetterViewScreenMixin {
         int x = questlogEnvelope$circleX();
         int y = questlogEnvelope$circleY();
         int color = QuestMagicCircle.getColor(this.letter.getItemStack());
+        long now = Util.getMillis();
+
         MagicCircleTexture.render(graphics, x, y, size);
 
-        // Once the server marks the item as activated, keep the exact same
-        // circle permanently filled with the configured color. The local flag
-        // avoids a brief black flash while the inventory update travels back.
-        if (QuestMagicCircle.isActivated(this.letter.getItemStack())
-                || this.questlogEnvelope$locallyActivated) {
-            MagicCircleTexture.renderTintedFill(graphics, x, y, size, 1.0F, color);
+        boolean activated = QuestMagicCircle.isActivated(this.letter.getItemStack());
+        if (activated) {
+            if (!this.questlogEnvelope$wasActivated) {
+                this.questlogEnvelope$activationFlashStartedAt = now;
+            }
+            this.questlogEnvelope$wasActivated = true;
+            this.questlogEnvelope$activationSent = false;
             questlogEnvelope$resetHold();
+
+            MagicCircleTexture.renderTintedFill(graphics, x, y, size, 1.0F, color);
+            long flashAge = now - this.questlogEnvelope$activationFlashStartedAt;
+            if (flashAge >= 0L && flashAge < QUESTLOG_ENVELOPE$ACTIVATION_FLASH_MS) {
+                float pulse = 1.0F - flashAge / (float) QUESTLOG_ENVELOPE$ACTIVATION_FLASH_MS;
+                MagicCircleTexture.renderGlow(graphics, x, y, size, color, pulse);
+            }
             return;
+        }
+        this.questlogEnvelope$wasActivated = false;
+
+        // Keep the circle visually complete for a short round-trip window after
+        // sending the payload. If the server rejects it, the client naturally
+        // falls back to the inactive state and the user can retry.
+        if (this.questlogEnvelope$activationSent) {
+            if (now - this.questlogEnvelope$activationRequestSentAt
+                    <= QUESTLOG_ENVELOPE$REQUEST_VISUAL_TIMEOUT_MS) {
+                MagicCircleTexture.renderTintedFill(graphics, x, y, size, 1.0F, color);
+                return;
+            }
+            this.questlogEnvelope$activationSent = false;
         }
 
         if (!this.questlogEnvelope$holdingCircle) {
@@ -101,8 +133,9 @@ public abstract class LetterViewScreenMixin {
             return;
         }
 
-        long elapsed = Math.max(0L, Util.getMillis() - this.questlogEnvelope$holdStartedAt);
-        float progress = Math.min(1.0F, elapsed / (float) QUESTLOG_ENVELOPE$HOLD_TIME_MS);
+        long elapsed = Math.max(0L, now - this.questlogEnvelope$holdStartedAt);
+        int holdMillis = QuestMagicCircle.getHoldMillis(this.letter.getItemStack());
+        float progress = Math.min(1.0F, elapsed / (float) holdMillis);
 
         MagicCircleTexture.renderTintedFill(
                 graphics,
@@ -114,13 +147,10 @@ public abstract class LetterViewScreenMixin {
         );
 
         if (progress >= 1.0F && !this.questlogEnvelope$activationSent && this.hand != null) {
-            if (minecraft.player != null && minecraft.player.connection != null) {
-                this.questlogEnvelope$activationSent = true;
-                this.questlogEnvelope$locallyActivated = true;
-                minecraft.player.connection.sendCommand(
-                        "questlog_envelope magic_circle activate " + actionId.get()
-                );
-            }
+            this.questlogEnvelope$activationSent = true;
+            this.questlogEnvelope$activationRequestSentAt = now;
+            questlogEnvelope$resetHold();
+            MagicCircleNetworking.sendActivation(actionId.get());
         }
     }
 
@@ -137,12 +167,11 @@ public abstract class LetterViewScreenMixin {
 
         if (!QuestMagicCircle.has(this.letter.getItemStack())
                 || QuestMagicCircle.isActivated(this.letter.getItemStack())
-                || this.questlogEnvelope$locallyActivated) {
+                || this.questlogEnvelope$activationSent) {
             return;
         }
 
         this.questlogEnvelope$holdingCircle = true;
-        this.questlogEnvelope$activationSent = false;
         this.questlogEnvelope$holdStartedAt = Util.getMillis();
         cir.setReturnValue(true);
     }
@@ -176,7 +205,15 @@ public abstract class LetterViewScreenMixin {
     @Unique
     private void questlogEnvelope$resetHold() {
         this.questlogEnvelope$holdingCircle = false;
-        this.questlogEnvelope$activationSent = false;
         this.questlogEnvelope$holdStartedAt = 0L;
+    }
+
+    @Unique
+    private void questlogEnvelope$resetAllState() {
+        questlogEnvelope$resetHold();
+        this.questlogEnvelope$activationSent = false;
+        this.questlogEnvelope$wasActivated = false;
+        this.questlogEnvelope$activationRequestSentAt = 0L;
+        this.questlogEnvelope$activationFlashStartedAt = 0L;
     }
 }
