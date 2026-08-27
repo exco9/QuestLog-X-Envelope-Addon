@@ -5,10 +5,14 @@
   "questlog_envelope.editor.type.mail_sent": "Courrier envoyé",
 
   "questlog_envelope.editor.seal": "Sceau : %s",
-  "questlog_envelope.editor.seal.none": "Aucun",
+  "questlog_envelope.editor.seal.none": "Réinitialiser",
   "questlog_envelope.editor.seal.button": "Sceau",
   "questlog_envelope.editor.seal.title": "Choisir un sceau Envelope",
   "questlog_envelope.editor.magic_circle": "Cercle magique : %s",
+  "questlog_envelope.editor.magic_circle.color": "Couleur",
+  "questlog_envelope.editor.magic_circle.command": "Commande",
+  "questlog_envelope.editor.magic_circle.command_hint": "/say Activé par @s",
+  "questlog_envelope.editor.magic_circle.invalid_color": "La couleur du cercle doit être au format #RRGGBB",
   "questlog_envelope.magic_circle.activated": "Le cercle magique a été activé.",
   "questlog_envelope.magic_circle.already_used": "Ce cercle magique a déjà été utilisé.",
 
