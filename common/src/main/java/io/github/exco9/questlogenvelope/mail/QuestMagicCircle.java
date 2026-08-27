@@ -34,6 +34,7 @@ public final class QuestMagicCircle {
     private static final String X_KEY = "x";
     private static final String Y_KEY = "y";
     private static final String SIZE_KEY = "size";
+    private static final String ACTIVATED_KEY = "activated";
 
     private QuestMagicCircle() {
     }
@@ -75,6 +76,7 @@ public final class QuestMagicCircle {
         circle.putInt(X_KEY, safeX);
         circle.putInt(Y_KEY, safeY);
         circle.putInt(SIZE_KEY, safeSize);
+        circle.putBoolean(ACTIVATED_KEY, false);
         addonData.put(CIRCLE_KEY, circle);
         customData.put(ROOT_KEY, addonData);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
@@ -103,6 +105,10 @@ public final class QuestMagicCircle {
 
     public static int getSize(ItemStack stack) {
         return read(stack).map(CircleData::size).orElse(DEFAULT_SIZE);
+    }
+
+    public static boolean isActivated(ItemStack stack) {
+        return read(stack).map(CircleData::activated).orElse(false);
     }
 
     public static int defaultX(int size) {
@@ -136,12 +142,20 @@ public final class QuestMagicCircle {
         }
 
         CircleData circle = optionalCircle.get();
+        if (circle.activated()) {
+            player.displayClientMessage(
+                    Component.translatable("questlog_envelope.magic_circle.already_used"),
+                    true
+            );
+            return ActivationResult.ALREADY_USED;
+        }
+
         MagicCircleSavedData data = MagicCircleSavedData.get(player.serverLevel());
         Optional<MagicCircleSavedData.ActionDefinition> optionalAction = data.getAction(circle.actionId());
 
         if (optionalAction.isEmpty()) {
             if (data.isConsumed(circle.actionId())) {
-                clear(stack);
+                markActivated(stack);
                 player.displayClientMessage(
                         Component.translatable("questlog_envelope.magic_circle.already_used"),
                         true
@@ -157,6 +171,13 @@ public final class QuestMagicCircle {
         }
 
         if (!data.claim(circle.actionId())) {
+            if (data.isConsumed(circle.actionId())) {
+                markActivated(stack);
+            }
+            player.displayClientMessage(
+                    Component.translatable("questlog_envelope.magic_circle.already_used"),
+                    true
+            );
             return ActivationResult.ALREADY_USED;
         }
 
@@ -168,7 +189,10 @@ public final class QuestMagicCircle {
 
         executeCommand(player, action.command());
 
-        clear(stack);
+        // Keep the circle metadata on the physical letter. Its permanent
+        // activated flag makes the final configured color persist after use,
+        // while MagicCircleSavedData remains authoritative for one-shot safety.
+        markActivated(stack);
         player.displayClientMessage(
                 Component.translatable("questlog_envelope.magic_circle.activated"),
                 true
@@ -207,6 +231,34 @@ public final class QuestMagicCircle {
             value = value.substring(1).trim();
         }
         return value.isEmpty() ? null : value;
+    }
+
+    private static ItemStack markActivated(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null) {
+            return stack;
+        }
+
+        CompoundTag customData = data.copyTag();
+        if (!customData.contains(ROOT_KEY, Tag.TAG_COMPOUND)) {
+            return stack;
+        }
+
+        CompoundTag addonData = customData.getCompound(ROOT_KEY);
+        if (!addonData.contains(CIRCLE_KEY, Tag.TAG_COMPOUND)) {
+            return stack;
+        }
+
+        CompoundTag circle = addonData.getCompound(CIRCLE_KEY);
+        if (!circle.hasUUID(ACTION_ID_KEY)) {
+            return stack;
+        }
+
+        circle.putBoolean(ACTIVATED_KEY, true);
+        addonData.put(CIRCLE_KEY, circle);
+        customData.put(ROOT_KEY, addonData);
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
+        return stack;
     }
 
     /** Removes only magic-circle metadata; normal mail and quest markers are untouched. */
@@ -270,8 +322,16 @@ public final class QuestMagicCircle {
         int y = circle.contains(Y_KEY, Tag.TAG_INT)
                 ? clampY(circle.getInt(Y_KEY), size)
                 : defaultY(size);
+        boolean activated = circle.getBoolean(ACTIVATED_KEY);
 
-        return Optional.of(new CircleData(circle.getUUID(ACTION_ID_KEY), color, x, y, size));
+        return Optional.of(new CircleData(
+                circle.getUUID(ACTION_ID_KEY),
+                color,
+                x,
+                y,
+                size,
+                activated
+        ));
     }
 
     public enum ActivationResult {
@@ -282,7 +342,7 @@ public final class QuestMagicCircle {
         NOT_THIS_ITEM
     }
 
-    private record CircleData(UUID actionId, int color, int x, int y, int size) {
+    private record CircleData(UUID actionId, int color, int x, int y, int size, boolean activated) {
     }
 
     /** Keeps Questlog-specific progression out of the action storage class. */
