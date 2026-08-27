@@ -1,6 +1,7 @@
 package io.github.exco9.questlogenvelope.client;
 
 import com.google.gson.JsonObject;
+import io.github.exco9.questlogenvelope.mail.QuestMagicCircle;
 import io.github.mortuusars.envelope.client.gui.screen.LetterEditScreen;
 import io.github.mortuusars.envelope.client.gui.widget.textbox.TextBox;
 import io.github.mortuusars.envelope.client.gui.widget.textbox.text.FormattedString;
@@ -23,6 +24,8 @@ public final class LetterRewardEditorScreen extends Screen {
 
     private EditBox senderBox;
     private EditBox letterTitleBox;
+    private EditBox magicCircleColorBox;
+    private EditBox magicCircleCommandBox;
     private TextBox textBox;
     private boolean autoClaim;
     private boolean magicCircle;
@@ -51,8 +54,8 @@ public final class LetterRewardEditorScreen extends Screen {
     protected void init() {
         int letterWidth = 176;
         int letterHeight = 192;
-        int panelHeight = 242;
-        this.panelWidth = 180;
+        int panelHeight = 264;
+        this.panelWidth = 190;
         int gap = 12;
         int totalWidth = letterWidth + gap + panelWidth;
         int top = Math.max(4, (this.height - panelHeight) / 2);
@@ -84,7 +87,7 @@ public final class LetterRewardEditorScreen extends Screen {
         this.senderBox = new EditBox(
                 this.font,
                 this.panelX,
-                this.panelY + 30,
+                this.panelY + 29,
                 this.panelWidth,
                 18,
                 Component.translatable("questlog_envelope.editor.letter.sender")
@@ -97,7 +100,7 @@ public final class LetterRewardEditorScreen extends Screen {
         this.letterTitleBox = new EditBox(
                 this.font,
                 this.panelX,
-                this.panelY + 68,
+                this.panelY + 64,
                 this.panelWidth,
                 18,
                 Component.translatable("questlog_envelope.editor.letter.letter_title")
@@ -109,39 +112,72 @@ public final class LetterRewardEditorScreen extends Screen {
         this.addRenderableWidget(Button.builder(autoClaimLabel(), button -> {
             this.autoClaim = !this.autoClaim;
             button.setMessage(autoClaimLabel());
-        }).bounds(this.panelX, this.panelY + 94, this.panelWidth, 18).build());
+        }).bounds(this.panelX, this.panelY + 89, this.panelWidth, 18).build());
 
         this.addRenderableWidget(Button.builder(magicCircleLabel(), button -> {
             this.magicCircle = !this.magicCircle;
             button.setMessage(magicCircleLabel());
-        }).bounds(this.panelX, this.panelY + 116, this.panelWidth, 18).build());
+            updateMagicCircleFields();
+        }).bounds(this.panelX, this.panelY + 111, this.panelWidth, 18).build());
+
+        this.magicCircleColorBox = new EditBox(
+                this.font,
+                this.panelX,
+                this.panelY + 146,
+                72,
+                18,
+                Component.translatable("questlog_envelope.editor.magic_circle.color")
+        );
+        this.magicCircleColorBox.setMaxLength(8);
+        this.magicCircleColorBox.setValue(getString(
+                "magic_circle_color",
+                formatColor(QuestMagicCircle.DEFAULT_COLOR)
+        ));
+        this.magicCircleColorBox.setHint(Component.literal("#55AAFF"));
+        this.addRenderableWidget(this.magicCircleColorBox);
+
+        this.magicCircleCommandBox = new EditBox(
+                this.font,
+                this.panelX + 78,
+                this.panelY + 146,
+                this.panelWidth - 78,
+                18,
+                Component.translatable("questlog_envelope.editor.magic_circle.command")
+        );
+        this.magicCircleCommandBox.setMaxLength(512);
+        this.magicCircleCommandBox.setValue(getString("magic_circle_command", ""));
+        this.magicCircleCommandBox.setHint(Component.translatable(
+                "questlog_envelope.editor.magic_circle.command_hint"
+        ));
+        this.addRenderableWidget(this.magicCircleCommandBox);
+        updateMagicCircleFields();
 
         this.addRenderableWidget(Button.builder(
                 Component.literal("<"),
                 button -> this.sealSelection.previous()
-        ).bounds(this.panelX, this.panelY + 143, 32, 20).build());
+        ).bounds(this.panelX, this.panelY + 171, 28, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("questlog_envelope.editor.seal.none"),
                 button -> this.sealSelection.clear()
-        ).bounds(this.panelX + 38, this.panelY + 143, this.panelWidth - 76, 20).build());
+        ).bounds(this.panelX + 34, this.panelY + 171, this.panelWidth - 68, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.literal(">"),
                 button -> this.sealSelection.next()
-        ).bounds(this.panelX + this.panelWidth - 32, this.panelY + 143, 32, 20).build());
+        ).bounds(this.panelX + this.panelWidth - 28, this.panelY + 171, 28, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.cancel"),
                 button -> this.onClose()
-        ).bounds(this.panelX, this.panelY + 218, (this.panelWidth - 6) / 2, 20).build());
+        ).bounds(this.panelX, this.panelY + 241, (this.panelWidth - 6) / 2, 20).build());
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 button -> saveAndClose()
         ).bounds(
                 this.panelX + (this.panelWidth + 6) / 2,
-                this.panelY + 218,
+                this.panelY + 241,
                 (this.panelWidth - 6) / 2,
                 20
         ).build());
@@ -155,11 +191,23 @@ public final class LetterRewardEditorScreen extends Screen {
                 ? new FormattedString()
                 : this.textBox.getEditor().getText();
         int cursor = this.textBox == null ? 0 : this.textBox.getEditor().getCursorPos();
+        String sender = this.senderBox == null ? getString("sender", "") : this.senderBox.getValue();
+        String title = this.letterTitleBox == null ? getString("title", "Letter") : this.letterTitleBox.getValue();
+        String color = this.magicCircleColorBox == null
+                ? getString("magic_circle_color", formatColor(QuestMagicCircle.DEFAULT_COLOR))
+                : this.magicCircleColorBox.getValue();
+        String command = this.magicCircleCommandBox == null
+                ? getString("magic_circle_command", "")
+                : this.magicCircleCommandBox.getValue();
 
         super.resize(minecraft, width, height);
 
         this.textBox.getEditor().setText(message);
         this.textBox.getEditor().setCursorPos(cursor, false);
+        this.senderBox.setValue(sender);
+        this.letterTitleBox.setValue(title);
+        this.magicCircleColorBox.setValue(color);
+        this.magicCircleCommandBox.setValue(command);
     }
 
     private Component autoClaimLabel() {
@@ -174,6 +222,15 @@ public final class LetterRewardEditorScreen extends Screen {
                 "questlog_envelope.editor.magic_circle",
                 Component.translatable(this.magicCircle ? "options.on" : "options.off")
         );
+    }
+
+    private void updateMagicCircleFields() {
+        if (this.magicCircleColorBox != null) {
+            this.magicCircleColorBox.active = this.magicCircle;
+        }
+        if (this.magicCircleCommandBox != null) {
+            this.magicCircleCommandBox.active = this.magicCircle;
+        }
     }
 
     private void saveAndClose() {
@@ -204,7 +261,6 @@ public final class LetterRewardEditorScreen extends Screen {
         }
 
         this.rewardEntry.remove("font_size");
-        // Explicitly discard the old feature that tied magic behavior to wax seals.
         this.rewardEntry.remove("magic_seal");
 
         ResourceLocation seal = this.sealSelection.get();
@@ -215,9 +271,27 @@ public final class LetterRewardEditorScreen extends Screen {
         }
 
         if (this.magicCircle) {
+            @Nullable Integer color = parseColor(this.magicCircleColorBox.getValue());
+            if (color == null) {
+                this.validationError = Component.translatable(
+                        "questlog_envelope.editor.magic_circle.invalid_color"
+                );
+                return;
+            }
+
             this.rewardEntry.addProperty("magic_circle", true);
+            this.rewardEntry.addProperty("magic_circle_color", formatColor(color));
+
+            String command = this.magicCircleCommandBox.getValue().trim();
+            if (command.isEmpty()) {
+                this.rewardEntry.remove("magic_circle_command");
+            } else {
+                this.rewardEntry.addProperty("magic_circle_command", command);
+            }
         } else {
             this.rewardEntry.remove("magic_circle");
+            this.rewardEntry.remove("magic_circle_color");
+            this.rewardEntry.remove("magic_circle_command");
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -229,7 +303,33 @@ public final class LetterRewardEditorScreen extends Screen {
     }
 
     private String getString(String key, String fallback) {
-        return this.rewardEntry.has(key) ? this.rewardEntry.get(key).getAsString() : fallback;
+        return this.rewardEntry.has(key) && this.rewardEntry.get(key).isJsonPrimitive()
+                ? this.rewardEntry.get(key).getAsString()
+                : fallback;
+    }
+
+    private static @Nullable Integer parseColor(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) {
+            return QuestMagicCircle.DEFAULT_COLOR;
+        }
+        if (value.startsWith("#")) {
+            value = value.substring(1);
+        } else if (value.startsWith("0x") || value.startsWith("0X")) {
+            value = value.substring(2);
+        }
+        if (value.length() != 6) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value, 16) & 0xFFFFFF;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static String formatColor(int rgb) {
+        return String.format("#%06X", rgb & 0xFFFFFF);
     }
 
     @Override
@@ -266,7 +366,7 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.panelX - 6,
                 this.panelY - 6,
                 this.panelX + this.panelWidth + 6,
-                this.panelY + 242,
+                this.panelY + 264,
                 0xB0101010
         );
     }
@@ -294,7 +394,7 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.font,
                 Component.translatable("questlog_envelope.editor.letter.sender"),
                 this.panelX,
-                this.panelY + 19,
+                this.panelY + 18,
                 0xFFFFFF,
                 false
         );
@@ -302,23 +402,61 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.font,
                 Component.translatable("questlog_envelope.editor.letter.letter_title"),
                 this.panelX,
-                this.panelY + 57,
+                this.panelY + 53,
                 0xFFFFFF,
                 false
+        );
+        graphics.drawString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.magic_circle.color"),
+                this.panelX,
+                this.panelY + 135,
+                0xFFFFFF,
+                false
+        );
+        graphics.drawString(
+                this.font,
+                Component.translatable("questlog_envelope.editor.magic_circle.command"),
+                this.panelX + 78,
+                this.panelY + 135,
+                0xFFFFFF,
+                false
+        );
+
+        @Nullable Integer previewColor = parseColor(
+                this.magicCircleColorBox == null ? "" : this.magicCircleColorBox.getValue()
+        );
+        graphics.fill(
+                this.panelX + 61,
+                this.panelY + 135,
+                this.panelX + 69,
+                this.panelY + 143,
+                0xFF000000 | (previewColor == null ? 0xFF5555 : previewColor)
         );
 
         this.sealSelection.renderPreview(
                 graphics,
                 this.panelX + this.panelWidth / 2 - 15,
-                this.panelY + 168
+                this.panelY + 195
         );
-        graphics.drawCenteredString(
-                this.font,
-                Component.translatable("questlog_envelope.editor.seal", this.sealSelection.label()),
-                this.panelX + this.panelWidth / 2,
-                this.panelY + 200,
-                0xFFFFFF
-        );
+
+        if (this.validationError == null) {
+            graphics.drawCenteredString(
+                    this.font,
+                    Component.translatable("questlog_envelope.editor.seal", this.sealSelection.label()),
+                    this.panelX + this.panelWidth / 2,
+                    this.panelY + 227,
+                    0xFFFFFF
+            );
+        } else {
+            graphics.drawCenteredString(
+                    this.font,
+                    this.validationError,
+                    this.panelX + this.panelWidth / 2,
+                    this.panelY + 227,
+                    0xFF5555
+            );
+        }
 
         graphics.drawCenteredString(
                 this.font,
@@ -327,15 +465,5 @@ public final class LetterRewardEditorScreen extends Screen {
                 this.letterTop + 194,
                 0xFFB8B8B8
         );
-
-        if (this.validationError != null) {
-            graphics.drawCenteredString(
-                    this.font,
-                    this.validationError,
-                    this.panelX + this.panelWidth / 2,
-                    this.panelY + 136,
-                    0xFF5555
-            );
-        }
     }
 }
