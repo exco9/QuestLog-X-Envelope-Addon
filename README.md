@@ -75,22 +75,32 @@ A native Envelope wax seal can be selected from the built-in A–Z, 0–9 and em
 
 A letter reward can enable **Magic circle / Cercle magique** independently of its Envelope wax seal.
 
-The circle is drawn directly on the writable paper area using the addon artwork. It occupies roughly one seventh of the writable surface and is previewed directly in the letter reward editor.
+The circle is drawn directly on the writable paper area and previewed in the letter reward editor. The center handle moves it and the upper-left handle resizes it. Hovering either handle identifies its purpose, the live size is shown while resizing, and holding **Shift** snaps movement/size to a small grid. The ↺ button resets position and size to the default bottom-right layout.
 
-When the player later opens the delivered letter, holding the left mouse button on the circle for about three seconds activates it. Releasing early or moving the cursor away cancels the activation.
+The editor also configures:
 
-Each generated circle is bound to the intended player's UUID and receives a unique persisted action ID. The server validates that ID against the letter the player is actually holding, so copying or duplicating the physical item cannot replay the same action.
+- activation color (`#RRGGBB`);
+- hold duration, from **0.5 to 10 seconds** (3 seconds by default);
+- an optional server-side command;
+- an optional `grants_quest` Questlog action.
 
-For the first implementation, the existing `grants_quest` field is the supported action. The circle action format is intentionally independent so command/custom-event actions can be added later without redesigning the UI or anti-replay system.
+`grants_quest` and `magic_circle_command` can be used together. The server stores those executable actions independently of the physical letter and executes them once after validating the recipient and unique action ID.
+
+When the player opens the delivered letter, holding the left mouse button on the circle progressively fills the artwork with the configured color. Releasing early or moving the cursor away cancels the hold. Completion uses a dedicated client-to-server payload rather than a visible/internal player command. Successful activation plays a short chime and visual pulse, then the circle remains permanently displayed in its configured color.
+
+Each generated circle is bound to the intended player's UUID and receives a unique persisted action ID. The physical letter carries only its action ID and visual/interaction metadata. The server validates that ID against the letter the player is actually holding. A duplicated copy therefore cannot replay the action after the first copy consumes the ID; an old duplicate is simply recognized as already used.
+
+The stored action representation is typed (`quest`, `command`, with room for additional action types later), so future behavior can be added without redesigning the editor interaction or anti-replay layer. Letter metadata and SavedData are versioned, and legacy first-generation action records remain readable.
 
 ```text
 Quest reward created
   -> Envelope letter delivered
   -> player opens the letter
-  -> player holds the magic circle for ~3 seconds
-  -> server validates recipient + unique action ID
-  -> linked action executes once
-  -> circle disappears from the letter
+  -> player holds the magic circle for its configured duration
+  -> dedicated C2S payload requests activation
+  -> server validates recipient + held letter + unique action ID
+  -> configured quest/command actions execute once
+  -> circle remains on the letter in its configured activated color
 ```
 
 Example:
@@ -101,12 +111,20 @@ Example:
   "title": "Expedition invitation",
   "text": "Activate the circle if you accept the expedition.",
   "magic_circle": true,
+  "magic_circle_color": "#55AAFF",
+  "magic_circle_command": "/say Circle activated by @s",
+  "magic_circle_hold_seconds": 3.0,
+  "magic_circle_x": 103,
+  "magic_circle_y": 105,
+  "magic_circle_size": 36,
   "grants_quest": "example:expedition",
   "auto_claim": true
 }
 ```
 
 A normal Envelope wax seal may still be added to the same letter with `"seal": "envelope:heart"`; sealing/unsealing and magic-circle activation are two separate mechanics.
+
+The renderer first looks for the replaceable resource `assets/questlog_envelope/textures/gui/magic_circle.png`. Until a final raw artwork is supplied, the current artwork is kept as a text-resource fallback. This keeps the rendering code independent from a hard-coded Java Base64 blob and prepares the circle for normal resource-pack overrides.
 
 ### Send quest packages
 
@@ -180,8 +198,13 @@ Implemented on `dev/initial-integration`:
 - offline persistence/replay for delivered quest markers;
 - Envelope letter and package rewards;
 - real Envelope red-wax seals with built-in symbol preview/selection;
-- independent letter magic circles with editor preview and hold-to-activate interaction;
+- independent letter magic circles with visual move/resize controls, reset and Shift snapping;
+- configurable magic-circle color, hold duration and command action;
+- dedicated Fabric + NeoForge C2S activation payload;
+- typed/versioned server-side magic-circle actions with legacy-record migration;
 - persistent recipient binding and anti-replay protection for magic-circle actions;
+- persistent activated-circle color plus short activation pulse/chime feedback;
+- resource-backed magic-circle artwork loading prepared for normal PNG/resource-pack replacement;
 - native Envelope letter formatting including bold/italic/underline/colors;
 - visual package editor with inventory copying and multiple six-slot pages;
 - express package delivery to registered mailboxes;
@@ -190,4 +213,4 @@ Implemented on `dev/initial-integration`:
 - safe sender fallback and non-blocking Questlog reward collection;
 - short localized type labels and English/French translations.
 
-Next steps are primarily testing/polish and deciding which additional magic-circle action types should be exposed besides the current quest action.
+The remaining work is mainly in-game regression testing on both loaders and replacing/adding final custom visual/audio assets where desired.
