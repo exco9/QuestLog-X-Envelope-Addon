@@ -24,6 +24,9 @@ public final class LetterReward extends Reward {
     private final String text;
     private final boolean magicCircle;
     private final int magicCircleColor;
+    private final int magicCircleX;
+    private final int magicCircleY;
+    private final int magicCircleSize;
 
     public LetterReward(JsonObject definition) {
         super(definition);
@@ -37,6 +40,18 @@ public final class LetterReward extends Reward {
                 && definition.get("magic_circle").getAsBoolean();
         magicCircleColor = getColor(definition, "magic_circle_color", QuestMagicCircle.DEFAULT_COLOR);
         magicCircleCommand = getOptionalString(definition, "magic_circle_command");
+
+        magicCircleSize = QuestMagicCircle.clampSize(
+                getInt(definition, "magic_circle_size", QuestMagicCircle.DEFAULT_SIZE)
+        );
+        magicCircleX = QuestMagicCircle.clampX(
+                getInt(definition, "magic_circle_x", QuestMagicCircle.defaultX(magicCircleSize)),
+                magicCircleSize
+        );
+        magicCircleY = QuestMagicCircle.clampY(
+                getInt(definition, "magic_circle_y", QuestMagicCircle.defaultY(magicCircleSize)),
+                magicCircleSize
+        );
     }
 
     @Override
@@ -45,16 +60,16 @@ public final class LetterReward extends Reward {
                 .set(DataComponents.ITEM_NAME, Component.literal(title))
                 .get();
 
-        // The circle is independent from Envelope's physical wax seal. Both a
-        // quest progression and an optional server-authored command may run when
-        // the player completes the hold interaction.
         if (magicCircle) {
             QuestMagicCircle.attach(
                     letter,
                     player,
                     grantsQuestId,
                     magicCircleCommand,
-                    magicCircleColor
+                    magicCircleColor,
+                    magicCircleX,
+                    magicCircleY,
+                    magicCircleSize
             );
         } else if (grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
@@ -93,6 +108,17 @@ public final class LetterReward extends Reward {
         }
         String value = definition.get(key).getAsString().trim();
         return value.isEmpty() ? null : value;
+    }
+
+    private static int getInt(JsonObject definition, String key, int fallback) {
+        if (!definition.has(key) || !definition.get(key).isJsonPrimitive()) {
+            return fallback;
+        }
+        try {
+            return definition.get(key).getAsInt();
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
     }
 
     private static int getColor(JsonObject definition, String key, int fallback) {
