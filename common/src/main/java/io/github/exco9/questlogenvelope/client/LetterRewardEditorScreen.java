@@ -15,7 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/** Questlog letter editor using Envelope's native paper, formatting and seal renderer. */
+/** Questlog letter editor using Envelope's native paper and formatting UI. */
 public final class LetterRewardEditorScreen extends Screen {
     private final Screen parent;
     private final JsonObject rewardEntry;
@@ -25,7 +25,7 @@ public final class LetterRewardEditorScreen extends Screen {
     private EditBox letterTitleBox;
     private TextBox textBox;
     private boolean autoClaim;
-    private boolean magicSeal;
+    private boolean magicCircle;
 
     private int letterLeft;
     private int letterTop;
@@ -41,7 +41,7 @@ public final class LetterRewardEditorScreen extends Screen {
         this.parent = parent;
         this.rewardEntry = rewardEntry;
         this.autoClaim = rewardEntry.has("auto_claim") && rewardEntry.get("auto_claim").getAsBoolean();
-        this.magicSeal = rewardEntry.has("magic_seal") && rewardEntry.get("magic_seal").getAsBoolean();
+        this.magicCircle = rewardEntry.has("magic_circle") && rewardEntry.get("magic_circle").getAsBoolean();
         this.sealSelection = new SealSelection(
                 rewardEntry.has("seal") ? rewardEntry.get("seal").getAsString() : null
         );
@@ -111,12 +111,9 @@ public final class LetterRewardEditorScreen extends Screen {
             button.setMessage(autoClaimLabel());
         }).bounds(this.panelX, this.panelY + 94, this.panelWidth, 18).build());
 
-        this.addRenderableWidget(Button.builder(magicSealLabel(), button -> {
-            this.magicSeal = !this.magicSeal;
-            if (this.magicSeal && this.sealSelection.get() == null) {
-                this.sealSelection.next();
-            }
-            button.setMessage(magicSealLabel());
+        this.addRenderableWidget(Button.builder(magicCircleLabel(), button -> {
+            this.magicCircle = !this.magicCircle;
+            button.setMessage(magicCircleLabel());
         }).bounds(this.panelX, this.panelY + 116, this.panelWidth, 18).build());
 
         this.addRenderableWidget(Button.builder(
@@ -126,10 +123,7 @@ public final class LetterRewardEditorScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(
                 Component.translatable("questlog_envelope.editor.seal.none"),
-                button -> {
-                    this.sealSelection.clear();
-                    this.magicSeal = false;
-                }
+                button -> this.sealSelection.clear()
         ).bounds(this.panelX + 38, this.panelY + 143, this.panelWidth - 76, 20).build());
 
         this.addRenderableWidget(Button.builder(
@@ -175,10 +169,10 @@ public final class LetterRewardEditorScreen extends Screen {
         );
     }
 
-    private Component magicSealLabel() {
+    private Component magicCircleLabel() {
         return Component.translatable(
-                "questlog_envelope.editor.magic_seal",
-                Component.translatable(this.magicSeal ? "options.on" : "options.off")
+                "questlog_envelope.editor.magic_circle",
+                Component.translatable(this.magicCircle ? "options.on" : "options.off")
         );
     }
 
@@ -210,18 +204,20 @@ public final class LetterRewardEditorScreen extends Screen {
         }
 
         this.rewardEntry.remove("font_size");
+        // Explicitly discard the old feature that tied magic behavior to wax seals.
+        this.rewardEntry.remove("magic_seal");
 
         ResourceLocation seal = this.sealSelection.get();
         if (seal == null) {
             this.rewardEntry.remove("seal");
-            this.rewardEntry.remove("magic_seal");
         } else {
             this.rewardEntry.addProperty("seal", seal.toString());
-            if (this.magicSeal) {
-                this.rewardEntry.addProperty("magic_seal", true);
-            } else {
-                this.rewardEntry.remove("magic_seal");
-            }
+        }
+
+        if (this.magicCircle) {
+            this.rewardEntry.addProperty("magic_circle", true);
+        } else {
+            this.rewardEntry.remove("magic_circle");
         }
 
         this.rewardEntry.addProperty("auto_claim", this.autoClaim);
@@ -278,6 +274,14 @@ public final class LetterRewardEditorScreen extends Screen {
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
+
+        if (this.magicCircle) {
+            MagicCircleTexture.render(
+                    graphics,
+                    this.letterLeft + 17 + 142 - MagicCircleTexture.DISPLAY_SIZE - 3,
+                    this.letterTop + 21 + 144 - MagicCircleTexture.DISPLAY_SIZE - 3
+            );
+        }
 
         graphics.drawCenteredString(
                 this.font,
