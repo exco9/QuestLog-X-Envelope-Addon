@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -91,7 +92,8 @@ public final class QuestMagicCircle {
         }
 
         if (ACTION_QUEST.equals(action.actionType()) && action.questId() != null) {
-            PendingQuestMailSavedData.get(player.serverLevel())
+            ServerLevel mailDataLevel = player.getServer().overworld();
+            PendingQuestMailSavedData.get(mailDataLevel)
                     .record(player.getScoreboardName(), action.questId());
             QuestMailUnlocker.applyPending(player, action.questId());
         }
