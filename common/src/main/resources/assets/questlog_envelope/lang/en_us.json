@@ -5,7 +5,7 @@
   "questlog_envelope.editor.type.mail_sent": "Mail Sent",
 
   "questlog_envelope.editor.seal": "Seal: %s",
-  "questlog_envelope.editor.seal.none": "Reset",
+  "questlog_envelope.editor.seal.none": "None",
   "questlog_envelope.editor.seal.reset": "Reset",
   "questlog_envelope.editor.seal.empty": "None",
   "questlog_envelope.editor.seal.button": "Seal",
@@ -15,6 +15,7 @@
   "questlog_envelope.editor.magic_circle.command": "Command",
   "questlog_envelope.editor.magic_circle.command_hint": "/say Activated by @s",
   "questlog_envelope.editor.magic_circle.invalid_color": "Magic-circle color must be #RRGGBB",
+  "questlog_envelope.editor.magic_circle.drag_hint": "Corner: resize • Center: move",
   "questlog_envelope.magic_circle.activated": "The magic circle has been activated.",
   "questlog_envelope.magic_circle.already_used": "This magic circle has already been used.",
 
