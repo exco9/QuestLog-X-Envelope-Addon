@@ -19,9 +19,11 @@ public final class LetterReward extends Reward {
     @Nullable private final ResourceLocation senderId;
     @Nullable private final ResourceLocation grantsQuestId;
     @Nullable private final ResourceLocation sealSymbolId;
+    @Nullable private final String magicCircleCommand;
     private final String title;
     private final String text;
     private final boolean magicCircle;
+    private final int magicCircleColor;
 
     public LetterReward(JsonObject definition) {
         super(definition);
@@ -33,6 +35,8 @@ public final class LetterReward extends Reward {
         magicCircle = definition.has("magic_circle")
                 && definition.get("magic_circle").isJsonPrimitive()
                 && definition.get("magic_circle").getAsBoolean();
+        magicCircleColor = getColor(definition, "magic_circle_color", QuestMagicCircle.DEFAULT_COLOR);
+        magicCircleCommand = getOptionalString(definition, "magic_circle_command");
     }
 
     @Override
@@ -41,11 +45,17 @@ public final class LetterReward extends Reward {
                 .set(DataComponents.ITEM_NAME, Component.literal(title))
                 .get();
 
-        // The magic circle is independent from Envelope's physical wax seal.
-        // For now grants_quest is the supported action. A circle without a quest
-        // still receives a one-shot action id so more action types can be added later.
+        // The circle is independent from Envelope's physical wax seal. Both a
+        // quest progression and an optional server-authored command may run when
+        // the player completes the hold interaction.
         if (magicCircle) {
-            QuestMagicCircle.attach(letter, player, grantsQuestId);
+            QuestMagicCircle.attach(
+                    letter,
+                    player,
+                    grantsQuestId,
+                    magicCircleCommand,
+                    magicCircleColor
+            );
         } else if (grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
         }
@@ -75,5 +85,38 @@ public final class LetterReward extends Reward {
             return null;
         }
         return ResourceLocation.tryParse(definition.get(key).getAsString());
+    }
+
+    private static @Nullable String getOptionalString(JsonObject definition, String key) {
+        if (!definition.has(key) || !definition.get(key).isJsonPrimitive()) {
+            return null;
+        }
+        String value = definition.get(key).getAsString().trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private static int getColor(JsonObject definition, String key, int fallback) {
+        if (!definition.has(key) || !definition.get(key).isJsonPrimitive()) {
+            return fallback;
+        }
+
+        try {
+            if (definition.get(key).getAsJsonPrimitive().isNumber()) {
+                return definition.get(key).getAsInt() & 0xFFFFFF;
+            }
+
+            String value = definition.get(key).getAsString().trim();
+            if (value.startsWith("#")) {
+                value = value.substring(1);
+            } else if (value.startsWith("0x") || value.startsWith("0X")) {
+                value = value.substring(2);
+            }
+            if (value.length() != 6) {
+                return fallback;
+            }
+            return Integer.parseInt(value, 16) & 0xFFFFFF;
+        } catch (RuntimeException ignored) {
+            return fallback;
+        }
     }
 }
