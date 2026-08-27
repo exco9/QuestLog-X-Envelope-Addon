@@ -6,6 +6,8 @@
 
   "questlog_envelope.editor.seal": "Seal: %s",
   "questlog_envelope.editor.seal.none": "Reset",
+  "questlog_envelope.editor.seal.reset": "Reset",
+  "questlog_envelope.editor.seal.empty": "None",
   "questlog_envelope.editor.seal.button": "Seal",
   "questlog_envelope.editor.seal.title": "Choose Envelope seal",
   "questlog_envelope.editor.magic_circle": "Magic circle: %s",
