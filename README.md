@@ -124,7 +124,7 @@ Example:
 
 A normal Envelope wax seal may still be added to the same letter with `"seal": "envelope:heart"`; sealing/unsealing and magic-circle activation are two separate mechanics.
 
-The renderer first looks for the replaceable resource `assets/questlog_envelope/textures/gui/magic_circle.png`. Until a final raw artwork is supplied, the current artwork is kept as a text-resource fallback. This keeps the rendering code independent from a hard-coded Java Base64 blob and prepares the circle for normal resource-pack overrides.
+The artwork is a normal replaceable Minecraft resource at `assets/questlog_envelope/textures/gui/magic_circle.png`. Fabric and NeoForge both invalidate the generated tint-mask cache when client resources reload, so changing a resource pack refreshes the circle without requiring a game restart.
 
 ### Send quest packages
 
@@ -204,7 +204,7 @@ Implemented on `dev/initial-integration`:
 - typed/versioned server-side magic-circle actions with legacy-record migration;
 - persistent recipient binding and anti-replay protection for magic-circle actions;
 - persistent activated-circle color plus short activation pulse/chime feedback;
-- resource-backed magic-circle artwork loading prepared for normal PNG/resource-pack replacement;
+- real resource-backed magic-circle PNG with live resource-pack reload support;
 - native Envelope letter formatting including bold/italic/underline/colors;
 - visual package editor with inventory copying and multiple six-slot pages;
 - express package delivery to registered mailboxes;
@@ -213,4 +213,4 @@ Implemented on `dev/initial-integration`:
 - safe sender fallback and non-blocking Questlog reward collection;
 - short localized type labels and English/French translations.
 
-The remaining work is mainly in-game regression testing on both loaders and replacing/adding final custom visual/audio assets where desired.
+The remaining work is mainly in-game regression testing on both loaders and replacing/adding optional custom visual/audio assets where desired.
