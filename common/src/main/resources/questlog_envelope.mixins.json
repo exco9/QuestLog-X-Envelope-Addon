@@ -7,10 +7,10 @@
     "BlockDropOffHandlerMixin",
     "DeliveryManagerMixin",
     "PlayerDropOffHandlerMixin",
-    "QuestlogEventsMixin",
-    "SealedMailItemMixin"
+    "QuestlogEventsMixin"
   ],
   "client": [
+    "LetterViewScreenMixin",
     "QuestEditorScreenMixin"
   ],
   "injectors": {
