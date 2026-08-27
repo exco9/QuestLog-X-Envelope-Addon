@@ -43,7 +43,7 @@ public final class MagicCircleTexture {
         int safeSize = Math.max(1, size);
         ensureRegistered();
         RenderSystem.enableBlend();
-        graphics.blit(TEXTURE, x, y, 0.0F, 0.0F, safeSize, safeSize, SOURCE_SIZE, SOURCE_SIZE);
+        renderScaled(graphics, TEXTURE, x, y, safeSize);
         RenderSystem.disableBlend();
     }
 
@@ -51,7 +51,7 @@ public final class MagicCircleTexture {
         renderTintedFill(graphics, x, y, DISPLAY_SIZE, progress, rgb);
     }
 
-    /** Reveals a recolored copy of the circle from bottom to top as progress reaches 1. */
+    /** Reveals a recolored copy of the full circle from bottom to top. */
     public static void renderTintedFill(
             GuiGraphics graphics,
             int x,
@@ -77,10 +77,24 @@ public final class MagicCircleTexture {
         RenderSystem.enableBlend();
         graphics.enableScissor(x, fillTop, x + safeSize, y + safeSize);
         RenderSystem.setShaderColor(red, green, blue, 1.0F);
-        graphics.blit(MASK_TEXTURE, x, y, 0.0F, 0.0F, safeSize, safeSize, SOURCE_SIZE, SOURCE_SIZE);
+        renderScaled(graphics, MASK_TEXTURE, x, y, safeSize);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.disableScissor();
         RenderSystem.disableBlend();
+    }
+
+    /**
+     * Always samples the complete 65x65 artwork and scales that complete image to
+     * the requested on-screen size. The old blit overload used the display size
+     * as the sampled source-region size, which cropped the PNG while resizing.
+     */
+    private static void renderScaled(GuiGraphics graphics, ResourceLocation texture, int x, int y, int size) {
+        float scale = size / (float) SOURCE_SIZE;
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0.0F);
+        graphics.pose().scale(scale, scale, 1.0F);
+        graphics.blit(texture, 0, 0, 0.0F, 0.0F, SOURCE_SIZE, SOURCE_SIZE, SOURCE_SIZE, SOURCE_SIZE);
+        graphics.pose().popPose();
     }
 
     private static void ensureRegistered() {
