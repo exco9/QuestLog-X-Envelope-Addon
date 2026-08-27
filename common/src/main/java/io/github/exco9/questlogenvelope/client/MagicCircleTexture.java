@@ -10,27 +10,32 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Optional;
 
-/** Client-side renderer for the user-provided 65x65 magic-circle artwork. */
+/** Client-side renderer for the magic-circle artwork. */
 @Environment(EnvType.CLIENT)
 public final class MagicCircleTexture {
-    public static final int SOURCE_SIZE = 65;
     public static final int DISPLAY_SIZE = QuestMagicCircle.DEFAULT_SIZE;
 
-    private static final ResourceLocation TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle");
-    private static final ResourceLocation MASK_TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle_mask");
+    /** Preferred real resource path. A resource pack can override this directly. */
+    public static final ResourceLocation ASSET_TEXTURE = QuestlogEnvelope.id("textures/gui/magic_circle.png");
 
-    private static final String PNG_BASE64 =
-            "iVBORw0KGgoAAAANSUhEUgAAAEEAAABBCAYAAACO98lFAAAAAXNSR0IArs4c6QAAAxhJREFUeJztW1FzgyEIm7v9/7/snrqzVDEJ0fZhueut9cOAgoDr1r7uohOy7aAdVxXFRUd9HXw2e/7R6MNrJ5d9VnnfCsbAlRwz/6M2QzGoA+9P6bZDNaAaCa55JWQeQL3D5gSXXgsyRWxOiMmumlMYDhlsxv9kDgkOYoen3boowlUInzJKrRTRTguyEnayrlf6jkrZTckrZU1NZBVuy0agu6smKTR0GX4pan82ClaoXmZ64GiL8dt2PQH1inJJQi9KVT2IHEw4e442OJWcgh45tmpBG+EqK2ip2j1ju0nULl2AVIR6xSWH4onn20S6UuRKVO3W5ehauC3kbrbUTzy7EvkQRDzKyFbQTtrlaImr3lSv4orOl3kzIrZlZcK0XMcF3ds1ssqjBxwbUOVC+4SX+Wx1GM/Xp30P0EL7TQMNJ/XYsLJVTjQi+ssbwaiKsX3ycnEzHB05Ds6mJ3I+eNuhhgjmzJKL2vOv+Gb6VmOr+Yo92SWr/wTBlnxGMSpYfcmKbERMvhnvDm23vmynmXHEY3HBu58ZD5Oks/E+I9zV/1WCQ5BxK30HmlDT4za7O+xCLYZWrM1MqKqJcKULOcLT56sQVDu7LJlVjsMuSbL2/ukaIyGWk1kyQZAlsxYWOkbTbLySDEf0xfqmhq4IlGeZLOJNR7OE8ExzQoQaEQjnbNwJym6m8VHmsrJVTqnBqpQkZj4ie2sD/uazV+kxYanl7RRGm6RjpXrXncjciXbH/TLG9gmjHNru7rjZ+Wq3utTlOF+VaGDnHsljrjNu9UyBX+ZxKmDOaaVEK3jiOfk1nPM3Re5mDVLo5Nl5cPeMTbqoXSWheJtDF8hWBLQExs22NWOowcr1Fd3kqh5EbgsXMdOIKU1b2WFqYqyezxY8/njv+IMwOypnGpVRn+1k1JaeJjvVTbJzMrts0TELXWVRp+VndlrhILzZGh/JDwhxNT/c5Cihmsi+kqPliJTjGzAqyrKy4s3qJepIDkCgKrV1dMV5NlQrRaWcvc37K1Tq+m68oustUG9z7O3Vhv//mn/Dn+ExXrxm2y9pciph28olSgAAAABJRU5ErkJggg==";
+    /** Text fallback kept only until/when a raw PNG is supplied in the repository. */
+    private static final ResourceLocation FALLBACK_BASE64 = QuestlogEnvelope.id("textures/gui/magic_circle.png.b64");
 
-    private static final String MASK_PNG_BASE64 =
-            "iVBORw0KGgoAAAANSUhEUgAAAEEAAABBCAYAAACO98lFAAADgUlEQVR42tVb7Y7kIAzDiPd/5dyPk1ajHiGJYzp7lVarne3QYPLhGAozGy9elYfhLaPWy5PG4f8ofvdXg2BJw+3x/+ffIMf9KghWMNA298H5fDdxU4KxXp58FpBsvpCAsQQAdFcDgu+27JiNyXsPtkQVwOaezES8sZF8rswTTsZaMSdYISdEK097xfyC+3+OgY8fz0OYELFbIGQAgGgMaz6nBMQsAPCMS7voRSDHt42tkpxgh3ir5ICb1edkVzjGbABQXTEUAUIDKDw4hLEgGGF4ZRx7VAkThIUx4cWSJWWFkJEe9ruTdLFszO5iNeoPzOEPXeLljrOKYcAQnExYdLzCI14n+9ENBxQSHhpNzi654WCPrHdQMMInACgAtZsgEve1GOUc9y4VoEMIQOgJai+oUOgsVb7iDSthaEUtGuO+QAq1XVO0olUv6rLPioYQetBshoJtktcbFzbPpj1qNbk+w/QyPARNIFBhk4yoMpJh8vaF8a8Ae0VU2SGq8gK2M/U2adJAwP7uw7GKUAcAC1xWAW5qblO0el0uoeQAZa9aQdLrKstREjUnwWWTXcZWRE3WSkpUTPL08sfzHu8zHMKHbca285skeTFngp/GR3uK0W8v+3skqWrvz/2TkM5OQgnIlamSLZACzHZ+i5CodhNge4eOCs2Wa3g8oSqdefX5c3Ws0EFmVtECr6va+3P/Eklnp1rvNTJeK20O4emU6WN1yJAlxQasVxqZe9Q22iKS2E0Sc4uUhbS5Snxu9w6KMbNJ2sYYmESsV+ozQ2PfAoBupfHI1L/pMlbimwn3j5ib0hu6iTaS948gdCUq5b5AteR1pcFQXsu4F6PmQNCwVc9GINtKd0qWamdZrW+gkhPUGxuVY3yV43tQA3lzG06ZI65617xkOEZ8CiWrXpmYtUq25rNNFhq9QKWPqJxPSCdGjLx6yx7LyxzpZwWaMYrq82T670L4IGinPSMrQLePFnUOeCsriCrzU3ZNMruDmPA4KFEY/c2dwWoKsxjH1jDSCMNZkEsJeREJjcnCnd6EGb90kGMRD0EzD6hFlRNg6OYEVhB5Q1RRCjOUqKJ8KcM2VUJ9ZDg2iHxD9hQaJX2P9IDOc2UgdBsbxXkHWYM1Ra5tTSA7322HkOLl0O6LmhCH41dA8MA4GcnIa//Fu9I7A09vvkfE679+a34UJvaVST+vP1iVpdsCvLdTAAAAAElFTkSuQmCC";
+    private static final ResourceLocation RUNTIME_TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle");
+    private static final ResourceLocation RUNTIME_MASK_TEXTURE = QuestlogEnvelope.id("dynamic/magic_circle_mask");
 
     private static boolean registered;
+    private static int sourceWidth = 65;
+    private static int sourceHeight = 65;
 
     private MagicCircleTexture() {
     }
@@ -43,7 +48,7 @@ public final class MagicCircleTexture {
         int safeSize = Math.max(1, size);
         ensureRegistered();
         RenderSystem.enableBlend();
-        renderScaled(graphics, TEXTURE, x, y, safeSize);
+        renderScaled(graphics, RUNTIME_TEXTURE, x, y, safeSize);
         RenderSystem.disableBlend();
     }
 
@@ -70,31 +75,74 @@ public final class MagicCircleTexture {
         int fillHeight = Math.max(1, Math.round(safeSize * clamped));
         int fillTop = y + safeSize - fillHeight;
 
-        float red = ((rgb >> 16) & 0xFF) / 255.0F;
-        float green = ((rgb >> 8) & 0xFF) / 255.0F;
-        float blue = (rgb & 0xFF) / 255.0F;
-
         RenderSystem.enableBlend();
         graphics.enableScissor(x, fillTop, x + safeSize, y + safeSize);
-        RenderSystem.setShaderColor(red, green, blue, 1.0F);
-        renderScaled(graphics, MASK_TEXTURE, x, y, safeSize);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        setShaderColor(rgb, 1.0F);
+        renderScaled(graphics, RUNTIME_MASK_TEXTURE, x, y, safeSize);
+        resetShaderColor();
         graphics.disableScissor();
         RenderSystem.disableBlend();
     }
 
-    /**
-     * Always samples the complete 65x65 artwork and scales that complete image to
-     * the requested on-screen size. The old blit overload used the display size
-     * as the sampled source-region size, which cropped the PNG while resizing.
-     */
+    /** Short activation pulse; the permanent final state is still the exact configured color. */
+    public static void renderGlow(
+            GuiGraphics graphics,
+            int x,
+            int y,
+            int size,
+            int rgb,
+            float strength
+    ) {
+        float clamped = Math.max(0.0F, Math.min(1.0F, strength));
+        if (clamped <= 0.0F) {
+            return;
+        }
+
+        ensureRegistered();
+        int padding = 2 + Math.round(2.0F * clamped);
+        RenderSystem.enableBlend();
+        setShaderColor(rgb, 0.28F * clamped);
+        renderScaled(
+                graphics,
+                RUNTIME_MASK_TEXTURE,
+                x - padding,
+                y - padding,
+                Math.max(1, size + padding * 2)
+        );
+        resetShaderColor();
+        RenderSystem.disableBlend();
+    }
+
+    /** Always scales the complete artwork instead of cropping its source region. */
     private static void renderScaled(GuiGraphics graphics, ResourceLocation texture, int x, int y, int size) {
-        float scale = size / (float) SOURCE_SIZE;
+        float scaleX = size / (float) sourceWidth;
+        float scaleY = size / (float) sourceHeight;
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0F);
-        graphics.pose().scale(scale, scale, 1.0F);
-        graphics.blit(texture, 0, 0, 0.0F, 0.0F, SOURCE_SIZE, SOURCE_SIZE, SOURCE_SIZE, SOURCE_SIZE);
+        graphics.pose().scale(scaleX, scaleY, 1.0F);
+        graphics.blit(
+                texture,
+                0,
+                0,
+                0.0F,
+                0.0F,
+                sourceWidth,
+                sourceHeight,
+                sourceWidth,
+                sourceHeight
+        );
         graphics.pose().popPose();
+    }
+
+    private static void setShaderColor(int rgb, float alpha) {
+        float red = ((rgb >> 16) & 0xFF) / 255.0F;
+        float green = ((rgb >> 8) & 0xFF) / 255.0F;
+        float blue = (rgb & 0xFF) / 255.0F;
+        RenderSystem.setShaderColor(red, green, blue, alpha);
+    }
+
+    private static void resetShaderColor() {
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private static void ensureRegistered() {
@@ -102,18 +150,59 @@ public final class MagicCircleTexture {
             return;
         }
 
-        registerTexture(TEXTURE, PNG_BASE64);
-        registerTexture(MASK_TEXTURE, MASK_PNG_BASE64);
+        NativeImage source = loadSourceImage();
+        NativeImage mask = createWhiteAlphaMask(source);
+        sourceWidth = source.getWidth();
+        sourceHeight = source.getHeight();
+
+        Minecraft minecraft = Minecraft.getInstance();
+        minecraft.getTextureManager().register(RUNTIME_TEXTURE, new DynamicTexture(source));
+        minecraft.getTextureManager().register(RUNTIME_MASK_TEXTURE, new DynamicTexture(mask));
         registered = true;
     }
 
-    private static void registerTexture(ResourceLocation id, String encodedPng) {
-        byte[] png = Base64.getDecoder().decode(encodedPng);
-        try (ByteArrayInputStream stream = new ByteArrayInputStream(png)) {
-            NativeImage image = NativeImage.read(stream);
-            Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to load embedded Questlog Envelope magic-circle texture", exception);
+    private static NativeImage loadSourceImage() {
+        Minecraft minecraft = Minecraft.getInstance();
+        Optional<Resource> preferred = minecraft.getResourceManager().getResource(ASSET_TEXTURE);
+        if (preferred.isPresent()) {
+            try (InputStream stream = preferred.get().open()) {
+                return NativeImage.read(stream);
+            } catch (IOException exception) {
+                throw new IllegalStateException("Unable to load magic-circle PNG resource", exception);
+            }
         }
+
+        Optional<Resource> fallback = minecraft.getResourceManager().getResource(FALLBACK_BASE64);
+        if (fallback.isEmpty()) {
+            throw new IllegalStateException(
+                    "Missing magic-circle resource: " + ASSET_TEXTURE + " (and fallback " + FALLBACK_BASE64 + ")"
+            );
+        }
+
+        try (InputStream stream = fallback.get().open()) {
+            String encoded = new String(stream.readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("\r", "")
+                    .replace("\n", "")
+                    .trim();
+            byte[] png = Base64.getDecoder().decode(encoded);
+            try (ByteArrayInputStream pngStream = new ByteArrayInputStream(png)) {
+                return NativeImage.read(pngStream);
+            }
+        } catch (IOException | IllegalArgumentException exception) {
+            throw new IllegalStateException("Unable to load fallback magic-circle resource", exception);
+        }
+    }
+
+    /** Builds a tintable white silhouette from the selected artwork's alpha channel. */
+    private static NativeImage createWhiteAlphaMask(NativeImage source) {
+        NativeImage mask = new NativeImage(source.getWidth(), source.getHeight(), true);
+        for (int y = 0; y < source.getHeight(); y++) {
+            for (int x = 0; x < source.getWidth(); x++) {
+                int pixel = source.getPixelRGBA(x, y);
+                int alpha = (pixel >>> 24) & 0xFF;
+                mask.setPixelRGBA(x, y, (alpha << 24) | 0x00FFFFFF);
+            }
+        }
+        return mask;
     }
 }
