@@ -1,6 +1,7 @@
 .gradle/
 build/
 **/build/
+dist/
 run/
 runs/
 .idea/
