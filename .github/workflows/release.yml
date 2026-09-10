@@ -20,15 +20,13 @@ jobs:
           java-version: '21'
 
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.5.0'
 
-      - name: Ensure Gradle wrapper is available
+      - name: Validate Gradle wrapper
         shell: bash
         run: |
-          if [[ ! -f gradlew || ! -f gradle/wrapper/gradle-wrapper.jar ]]; then
-            gradle wrapper --gradle-version 9.5.0
-          fi
+          test -f gradlew
+          test -f gradle/wrapper/gradle-wrapper.jar
+          grep -Fq 'gradle-9.5.0-bin.zip' gradle/wrapper/gradle-wrapper.properties
           chmod +x gradlew
 
       - name: Build
