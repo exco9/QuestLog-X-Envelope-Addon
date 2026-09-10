@@ -1,45 +1,54 @@
 # QuestLog × Envelope Addon
 
-Compatibility addon for **Questlog** and **Envelope** on Minecraft 1.21.1.
+Compatibility addon between **Questlog** and **Envelope** for Minecraft **1.21.1**.
 
-Current development target:
+Current target:
 
 - Java 21
-- Fabric
-- NeoForge
+- Fabric + NeoForge
 - Questlog 3.3.2
 - Envelope 0.7.5
+- Gradle 9.5.0
 
-See [`SYNTHESIS.md`](SYNTHESIS.md) for the architecture and analysis of both upstream projects.
+The addon keeps Questlog as the quest system and Envelope as the physical mail system. Quest progression is driven through Questlog's native objective/reward model, while visible mail deliveries use Envelope's mail, addressing, mailbox, and pigeon behavior.
+
+See [`SYNTHESIS.md`](SYNTHESIS.md) for the technical architecture and [`TESTING.md`](TESTING.md) for the release regression matrix.
+
+## Installation
+
+Install the jar matching your loader together with the matching Minecraft 1.21.1 versions of Questlog and Envelope and their normal dependencies.
+
+Do not install both addon jars at the same time:
+
+- Fabric: use the Fabric addon jar and Fabric builds of Questlog/Envelope.
+- NeoForge: use the NeoForge addon jar and NeoForge builds of Questlog/Envelope.
+
+CI build artifacts contain both loader-specific jars. Tagged releases are configured to publish the verified distributable jars as GitHub release assets.
 
 ## Questlog editor integration
 
-The compatibility types are registered through Questlog's public objective/reward registries, so they are available directly from Questlog's in-game quest editor.
-
-The editor keeps the real IDs internally but displays short localized names so they fit Questlog's narrow type picker.
+The compatibility types are registered through Questlog's objective/reward registries and are available directly from the in-game quest editor. Internal IDs remain stable while the editor displays short localized labels.
 
 ### Receive quest mail
 
 Use **Mail Received / Courrier reçu** (`questlog_envelope:mail_received`) as an objective or prerequisite when a quest should react to marked mail delivered by the addon.
 
-The optional `quest` field selects the expected quest marker. When omitted, the objective uses its own parent quest ID.
+The optional `quest` field selects the expected quest marker. When omitted, the objective uses its own parent quest ID. Delivered markers are persisted so a letter received while the target player is offline can still progress the quest after their Questlog state loads.
 
 ### Send matching mail
 
-Use **Mail Sent / Courrier envoyé** (`questlog_envelope:mail_sent`) as either an objective or prerequisite.
+Use **Mail Sent / Courrier envoyé** (`questlog_envelope:mail_sent`) as an objective or prerequisite.
 
-The event is recorded only when a player actually dispatches mail from an Envelope mailbox with a pigeon. Automated reward deliveries from this addon do not count as player-sent mail.
+The event is recorded only when a player actually dispatches mail from an Envelope mailbox with a pigeon. Addon-generated service/reward mail is excluded.
 
-Questlog's normal target field configures the recipient address and `required_amount` configures how many matching mail pieces are required. **Mail filters... / Filtres du courrier...** adds optional filters:
+Questlog's normal target field configures the recipient and `required_amount` configures how many matching pieces are required. **Mail filters... / Filtres du courrier...** adds optional filters for:
 
-- mail type: any, letter or package;
-- text that a letter must contain;
-- item that a package must contain;
+- mail type: any, letter, or package;
+- text a letter must contain;
+- item a package must contain;
 - minimum quantity of that item.
 
 All configured filters use AND semantics. Empty filters match anything.
-
-Example:
 
 ```json
 {
@@ -52,7 +61,7 @@ Example:
 }
 ```
 
-Or a letter-content objective:
+Letter-content example:
 
 ```json
 {
@@ -63,47 +72,30 @@ Or a letter-content objective:
 }
 ```
 
-### Send a quest letter
+## Envelope letter rewards
 
-Add **Envelope Letter / Lettre Envelope** (`questlog_envelope:letter`) as a reward and use Questlog's **Quest granted by letter** field when the mail should progress another quest.
+Add **Envelope Letter / Lettre Envelope** (`questlog_envelope:letter`) as a Questlog reward. The editor supports sender, title, rich text, auto-claim, Envelope wax seals, optional `grants_quest`, and the addon magic-circle mechanic.
 
-**Envelope Letter Options...** reuses Envelope's own letter paper and `TextBox`. Select text to reveal Envelope's native formatting toolbar for bold, italic, underline, strikethrough and colors. The small reminder under the letter is kept specifically to make this behavior discoverable.
+The letter editor reuses Envelope's writable-paper presentation and text formatting behavior. Selecting text exposes formatting for bold, italic, underline, strikethrough, and colors.
 
-A native Envelope wax seal can be selected from the built-in A–Z, 0–9 and emblem symbols. Wax seals are normal Envelope seals and have no special QuestLog behavior.
+A native Envelope wax seal can be selected from built-in letters, numbers, and emblem symbols. Wax seals use normal Envelope behavior and are independent of quest mechanics.
 
 ### Magic circles
 
-A letter reward can enable **Magic circle / Cercle magique** independently of its Envelope wax seal.
+A letter reward can enable an interactive **Magic circle / Cercle magique** independently of its wax seal.
 
-The circle is drawn directly on the writable paper area and previewed in the letter reward editor. The center handle moves it and the upper-left handle resizes it. Hovering either handle identifies its purpose, the live size is shown while resizing, and holding **Shift** snaps movement/size to a small grid. The ↺ button resets position and size to the default bottom-right layout.
+The editor previews the circle directly on the writable paper. The center handle moves it, the upper-left handle resizes it, Shift enables snapping, and the reset button restores the default bottom-right layout.
 
-The editor also configures:
+The editor configures:
 
 - activation color (`#RRGGBB`);
-- hold duration, from **0.5 to 10 seconds** (3 seconds by default);
+- hold duration from 0.5 to 10 seconds;
 - an optional server-side command;
-- an optional `grants_quest` Questlog action.
+- an optional `grants_quest` action.
 
-`grants_quest` and `magic_circle_command` can be used together. The server stores those executable actions independently of the physical letter and executes them once after validating the recipient and unique action ID.
+Quest and command actions can be combined. Executable actions are stored server-side, bound to the intended player's UUID, and keyed by a unique persistent action ID. The physical letter carries only the action ID plus visual/interaction metadata.
 
-When the player opens the delivered letter, holding the left mouse button on the circle progressively fills the artwork with the configured color. Releasing early or moving the cursor away cancels the hold. Completion uses a dedicated client-to-server payload rather than a visible/internal player command. Successful activation plays a short chime and visual pulse, then the circle remains permanently displayed in its configured color.
-
-Each generated circle is bound to the intended player's UUID and receives a unique persisted action ID. The physical letter carries only its action ID and visual/interaction metadata. The server validates that ID against the letter the player is actually holding. A duplicated copy therefore cannot replay the action after the first copy consumes the ID; an old duplicate is simply recognized as already used.
-
-The stored action representation is typed (`quest`, `command`, with room for additional action types later), so future behavior can be added without redesigning the editor interaction or anti-replay layer. Letter metadata and SavedData are versioned, and legacy first-generation action records remain readable.
-
-```text
-Quest reward created
-  -> Envelope letter delivered
-  -> player opens the letter
-  -> player holds the magic circle for its configured duration
-  -> dedicated C2S payload requests activation
-  -> server validates recipient + held letter + unique action ID
-  -> configured quest/command actions execute once
-  -> circle remains on the letter in its configured activated color
-```
-
-Example:
+When the player opens the delivered letter and holds the circle for the configured duration, a dedicated client-to-server payload requests activation. The server validates the recipient, the currently held letter, and the action ID before executing anything. Successful activation persists, plays feedback, and consumes the action ID so duplicated copies cannot replay it.
 
 ```json
 {
@@ -122,47 +114,13 @@ Example:
 }
 ```
 
-A normal Envelope wax seal may still be added to the same letter with `"seal": "envelope:heart"`; sealing/unsealing and magic-circle activation are two separate mechanics.
+The circle artwork is a replaceable Minecraft resource at `assets/questlog_envelope/textures/gui/magic_circle.png`. Fabric and NeoForge invalidate the generated tint-mask cache on client resource reload.
 
-The artwork is a normal replaceable Minecraft resource at `assets/questlog_envelope/textures/gui/magic_circle.png`. Fabric and NeoForge both invalidate the generated tint-mask cache when client resources reload, so changing a resource pack refreshes the circle without requiring a game restart.
-
-### Send quest packages
+## Envelope package rewards
 
 Add **Envelope Package / Colis Envelope** (`questlog_envelope:package`) as a reward.
 
-The visual editor uses Envelope's native six-slot package layout plus the player's current inventory. Clicking inventory stacks copies them into reward slots without modifying the real inventory. Additional package pages create additional physical packages.
-
-The adjacent **Seal / Sceau** button selects a native Envelope wax seal. Packages do not use the letter magic-circle mechanic; `grants_quest` on a package follows the normal delivery marker behavior.
-
-## Delivery behavior
-
-Letters use Envelope's normal service-delivery timing when the player has a default mailbox.
-
-Quest reward packages use express mailbox delivery: a real Envelope service pigeon starts near the recipient side and performs the final mailbox approach without the long simulated trip from the postal service/hub.
-
-When the player has no linked mailbox, an Envelope service pigeon approaches the player in the Overworld. The delivered item is spawned at the delivery point with a short downward motion rather than via `player.drop(...)`, so a moving player no longer looks like they personally threw the mail.
-
-Outside the Overworld, where Envelope's `MailService` does not operate, reward mail uses the safe direct-drop fallback.
-
-Configured sender services fall back to Envelope's normal mail-service address when invalid or unavailable. Envelope routing errors never leave Questlog's **Collect Reward** permanently unclaimed.
-
-## JSON examples
-
-### Regular sealed letter
-
-```json
-{
-  "type": "questlog_envelope:letter",
-  "sender": "envelope:mail_service",
-  "title": "New assignment",
-  "text": "A new task is waiting for you.",
-  "seal": "envelope:swords",
-  "grants_quest": "example:mysterious_request",
-  "auto_claim": true
-}
-```
-
-### Packages
+The visual editor uses Envelope's six-slot package layout plus the player's current inventory. Clicking an inventory stack copies it into reward configuration without modifying the real inventory. Additional pages create additional physical packages, and packages can use normal Envelope wax seals.
 
 ```json
 {
@@ -187,30 +145,72 @@ Configured sender services fall back to Envelope's normal mail-service address w
 
 Legacy package definitions using `"items": [...]` remain supported.
 
-## Current status
+## Delivery behavior
 
-Implemented on `dev/initial-integration`:
+Letters use Envelope's normal service-delivery timing when the player has a default mailbox.
+
+Quest reward packages use express mailbox delivery: an Envelope service pigeon performs the final recipient-side approach without the long simulated trip from the postal hub.
+
+When the player has no linked mailbox in the Overworld, a service-pigeon/direct-delivery fallback completes the reward near the player. Outside the Overworld, where Envelope's `MailService` does not operate, reward mail uses the safe direct-drop fallback.
+
+Invalid or unavailable configured sender services fall back to Envelope's normal mail-service address. Routing failures are handled so Questlog's reward does not remain permanently unclaimed.
+
+## Building
+
+A Gradle wrapper is committed/generated for reproducible local builds. With Java 21 installed:
+
+```bash
+./gradlew build --stacktrace
+bash scripts/verify-build.sh
+```
+
+The smoke-check script validates loader metadata and shared resources and collects distributable jars into `dist/`.
+
+GitHub Actions builds pull requests and pushes to `main` and `dev/**`, then retains `dist/*.jar` as a workflow artifact.
+
+## Testing
+
+The automated build is only the first release gate. Minecraft integration behavior should also be exercised in-game on **both Fabric and NeoForge**.
+
+Follow [`TESTING.md`](TESTING.md), which covers startup, editor registration, online/offline quest mail, sent-mail filters, letters, packages, seals, formatting, magic-circle validation/anti-replay, persistence, mailbox fallbacks, dimensions, resource reload, and localization.
+
+## Releases
+
+Before creating a release:
+
+1. complete the regression matrix on both loaders;
+2. update [`CHANGELOG.md`](CHANGELOG.md);
+3. set `mod_version` in `gradle.properties` to the release version without `-SNAPSHOT`;
+4. push the release commit and confirm CI is green;
+5. create/push a matching tag such as `v0.1.0`.
+
+The tag workflow refuses to publish if the tag version does not exactly match `mod_version`. A valid `v*` tag builds, smoke-checks, and attaches the Fabric and NeoForge jars to a GitHub release.
+
+## Current implementation
+
+Implemented:
 
 - multiloader Fabric + NeoForge project;
-- `questlog_envelope:mail_received` objective/prerequisite;
-- `questlog_envelope:mail_sent` objective/prerequisite with recipient/type/text/item filters;
-- mailbox-send observation that excludes addon-generated service mail;
-- offline persistence/replay for delivered quest markers;
+- `mail_received` with offline persistence/replay;
+- `mail_sent` with recipient/type/text/item/quantity filters;
+- exclusion of addon-generated mail from player-send progression;
 - Envelope letter and package rewards;
-- real Envelope red-wax seals with built-in symbol preview/selection;
-- independent letter magic circles with visual move/resize controls, reset and Shift snapping;
-- configurable magic-circle color, hold duration and command action;
-- dedicated Fabric + NeoForge C2S activation payload;
-- typed/versioned server-side magic-circle actions with legacy-record migration;
-- persistent recipient binding and anti-replay protection for magic-circle actions;
-- persistent activated-circle color plus short activation pulse/chime feedback;
-- real resource-backed magic-circle PNG with live resource-pack reload support;
-- native Envelope letter formatting including bold/italic/underline/colors;
-- visual package editor with inventory copying and multiple six-slot pages;
-- express package delivery to registered mailboxes;
-- service-pigeon fallback for players without mailboxes;
-- pigeon-position item spawning for direct delivery;
-- safe sender fallback and non-blocking Questlog reward collection;
-- short localized type labels and English/French translations.
+- native wax seals and letter rich-text editing;
+- interactive magic circles with configurable visuals/timing;
+- quest and server-command magic-circle actions;
+- dedicated Fabric + NeoForge C2S activation networking;
+- recipient binding, persistent action IDs, migration, and anti-replay protection;
+- persistent activated-circle state and resource-pack reload support;
+- multi-page package editor;
+- mailbox, no-mailbox, and non-Overworld delivery paths;
+- safe sender fallback and non-blocking reward collection;
+- English and French localization;
+- automated build/package smoke checks and release workflow.
 
-The remaining work is mainly in-game regression testing on both loaders and replacing/adding optional custom visual/audio assets where desired.
+The main release blocker for 0.1.0 is completing and recording the in-game regression pass on both loaders, then fixing anything it exposes.
+
+## License
+
+This project is distributed under **GNU GPL v3.0**. See `LICENSE`.
+
+The license choice reflects the direct integration with Envelope's GPLv3 code/API and is a project licensing decision, not legal advice.
