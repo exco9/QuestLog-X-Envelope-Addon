@@ -39,6 +39,31 @@ assert_entry() {
   fi
 }
 
+assert_json_entry() {
+  local jar="$1"
+  local entry="$2"
+  assert_entry "${jar}" "${entry}"
+  unzip -p "${jar}" "${entry}" | python3 -m json.tool >/dev/null
+}
+
+assert_expanded_metadata() {
+  local jar="$1"
+  local entry="$2"
+  if unzip -p "${jar}" "${entry}" | grep -Fq '${'; then
+    echo "Unexpanded template variable in ${entry} inside $(basename "${jar}")" >&2
+    exit 1
+  fi
+}
+
+assert_common_payload() {
+  local jar="$1"
+  assert_entry "${jar}" 'io/github/exco9/questlogenvelope/QuestlogEnvelope.class'
+  assert_json_entry "${jar}" 'questlog_envelope.mixins.json'
+  assert_json_entry "${jar}" 'assets/questlog_envelope/lang/en_us.json'
+  assert_json_entry "${jar}" 'assets/questlog_envelope/lang/fr_fr.json'
+  assert_entry "${jar}" 'assets/questlog_envelope/textures/gui/magic_circle.png'
+}
+
 collect_release_jars fabric
 collect_release_jars neoforge
 
@@ -48,19 +73,25 @@ neoforge_checked=0
 shopt -s nullglob
 for jar in "${DIST_DIR}/"*.jar; do
   if jar tf "${jar}" | grep -Fxq 'fabric.mod.json'; then
-    assert_entry "${jar}" 'questlog_envelope.mixins.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/lang/en_us.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/lang/fr_fr.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/textures/gui/magic_circle.png'
-    unzip -p "${jar}" fabric.mod.json | python3 -m json.tool >/dev/null
+    assert_common_payload "${jar}"
+    assert_entry "${jar}" 'io/github/exco9/questlogenvelope/fabric/QuestlogEnvelopeFabric.class'
+    assert_json_entry "${jar}" 'fabric.mod.json'
+    assert_expanded_metadata "${jar}" 'fabric.mod.json'
+    if ! unzip -p "${jar}" fabric.mod.json | grep -Fq 'GPL-3.0-only'; then
+      echo "Fabric metadata does not declare GPL-3.0-only in $(basename "${jar}")" >&2
+      exit 1
+    fi
     fabric_checked=$((fabric_checked + 1))
   fi
 
   if jar tf "${jar}" | grep -Fxq 'META-INF/neoforge.mods.toml'; then
-    assert_entry "${jar}" 'questlog_envelope.mixins.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/lang/en_us.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/lang/fr_fr.json'
-    assert_entry "${jar}" 'assets/questlog_envelope/textures/gui/magic_circle.png'
+    assert_common_payload "${jar}"
+    assert_entry "${jar}" 'io/github/exco9/questlogenvelope/neoforge/QuestlogEnvelopeNeoForge.class'
+    assert_expanded_metadata "${jar}" 'META-INF/neoforge.mods.toml'
+    if ! unzip -p "${jar}" META-INF/neoforge.mods.toml | grep -Fq 'GPL-3.0-only'; then
+      echo "NeoForge metadata does not declare GPL-3.0-only in $(basename "${jar}")" >&2
+      exit 1
+    fi
     neoforge_checked=$((neoforge_checked + 1))
   fi
 done
