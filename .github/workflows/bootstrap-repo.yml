@@ -32,7 +32,17 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Generate standard Gradle wrapper
-        run: gradle wrapper --gradle-version 9.5.0
+        shell: bash
+        run: |
+          wrapper_dir="$(mktemp -d)"
+          printf 'rootProject.name = "wrapper-bootstrap"\n' > "${wrapper_dir}/settings.gradle"
+          gradle -p "${wrapper_dir}" wrapper --gradle-version 9.5.0
+          cp "${wrapper_dir}/gradlew" ./gradlew
+          cp "${wrapper_dir}/gradlew.bat" ./gradlew.bat
+          mkdir -p gradle/wrapper
+          cp "${wrapper_dir}/gradle/wrapper/gradle-wrapper.jar" gradle/wrapper/gradle-wrapper.jar
+          cp "${wrapper_dir}/gradle/wrapper/gradle-wrapper.properties" gradle/wrapper/gradle-wrapper.properties
+          chmod +x gradlew
 
       - name: Install canonical GPLv3 license text
         shell: bash
