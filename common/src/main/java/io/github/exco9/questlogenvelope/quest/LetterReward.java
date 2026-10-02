@@ -1,6 +1,8 @@
 package io.github.exco9.questlogenvelope.quest;
 
 import com.google.gson.JsonObject;
+import io.github.exco9.questlogenvelope.mail.LetterSignature;
+import io.github.exco9.questlogenvelope.mail.SignatureActions;
 import io.github.exco9.questlogenvelope.mail.QuestMagicCircle;
 import io.github.exco9.questlogenvelope.mail.QuestMailDelivery;
 import io.github.exco9.questlogenvelope.mail.QuestMailMarker;
@@ -22,8 +24,11 @@ public final class LetterReward extends Reward {
     @Nullable private final String magicCircleCommand;
     private final String title;
     private final String text;
+    private final LetterSignature signature;
+    @Nullable private final String signatureCommand;
     private final boolean magicCircle;
     private final int magicCircleColor;
+    private final int magicCircleMagicColor;
     private final int magicCircleX;
     private final int magicCircleY;
     private final int magicCircleSize;
@@ -36,10 +41,13 @@ public final class LetterReward extends Reward {
         sealSymbolId = getOptionalId(definition, "seal");
         title = definition.has("title") ? definition.get("title").getAsString() : "Letter";
         text = definition.has("text") ? definition.get("text").getAsString() : "";
+        signature = LetterSignature.fromJson(definition);
+        signatureCommand = getOptionalString(definition, "signature_command");
         magicCircle = definition.has("magic_circle")
                 && definition.get("magic_circle").isJsonPrimitive()
                 && definition.get("magic_circle").getAsBoolean();
         magicCircleColor = getColor(definition, "magic_circle_color", QuestMagicCircle.DEFAULT_COLOR);
+        magicCircleMagicColor = getColor(definition, "magic_circle_magic_color", LetterSignature.DEFAULT_MAGIC_COLOR);
         magicCircleCommand = getOptionalString(definition, "magic_circle_command");
 
         magicCircleSize = QuestMagicCircle.clampSize(
@@ -78,12 +86,15 @@ public final class LetterReward extends Reward {
                     magicCircleX,
                     magicCircleY,
                     magicCircleSize,
-                    magicCircleHoldMillis
+                    magicCircleHoldMillis,
+                    magicCircleMagicColor
             );
         } else if (grantsQuestId != null) {
             QuestMailMarker.set(letter, grantsQuestId);
         }
 
+        signature.resolvePlayer(player.getGameProfile().getName()).attach(letter);
+        SignatureActions.attach(letter, player, signatureCommand);
         letter = QuestMailSeal.apply(player, letter, sealSymbolId);
 
         try {

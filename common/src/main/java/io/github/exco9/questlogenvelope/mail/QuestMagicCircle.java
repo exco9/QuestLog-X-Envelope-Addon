@@ -61,7 +61,8 @@ public final class QuestMagicCircle {
             int x,
             int y,
             int size,
-            int holdMillis
+            int holdMillis,
+            int magicColor
     ) {
         UUID actionId = UUID.randomUUID();
         MagicCircleSavedData.get(recipient.serverLevel()).register(
@@ -84,6 +85,7 @@ public final class QuestMagicCircle {
         circle.putInt(VERSION_KEY, FORMAT_VERSION);
         circle.putUUID(ACTION_ID_KEY, actionId);
         circle.putInt(COLOR_KEY, color & 0xFFFFFF);
+        circle.putInt("magic_color", magicColor & 0xFFFFFF);
         circle.putInt(X_KEY, safeX);
         circle.putInt(Y_KEY, safeY);
         circle.putInt(SIZE_KEY, safeSize);
@@ -105,6 +107,10 @@ public final class QuestMagicCircle {
 
     public static int getColor(ItemStack stack) {
         return read(stack).map(CircleData::color).orElse(DEFAULT_COLOR);
+    }
+
+    public static int getMagicColor(ItemStack stack) {
+        return read(stack).map(CircleData::magicColor).orElse(LetterSignature.DEFAULT_MAGIC_COLOR);
     }
 
     public static int getXOffset(ItemStack stack) {
@@ -223,7 +229,7 @@ public final class QuestMagicCircle {
      * Executes typed actions independently so adding a future action type does
      * not require changing the letter UI or one-shot transport format.
      */
-    private static void executeActions(
+    static void executeActions(
             ServerPlayer player,
             MagicCircleSavedData.ActionDefinition definition
     ) {
@@ -386,7 +392,8 @@ public final class QuestMagicCircle {
                 y,
                 size,
                 holdMillis,
-                activated
+                activated,
+                circle.contains("magic_color", Tag.TAG_INT) ? circle.getInt("magic_color") & 0xFFFFFF : LetterSignature.DEFAULT_MAGIC_COLOR
         ));
     }
 
@@ -405,7 +412,8 @@ public final class QuestMagicCircle {
             int y,
             int size,
             int holdMillis,
-            boolean activated
+            boolean activated,
+            int magicColor
     ) {
     }
 

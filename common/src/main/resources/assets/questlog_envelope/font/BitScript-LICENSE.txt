@@ -1,0 +1,10 @@
+BitScript pixel handwriting font
+Original bitmap: devurandom / usr_share
+TrueType conversion: William.Thompsonj
+License: CC0 1.0 Universal (public-domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+Sources:
+https://opengameart.org/content/bitscript-a-low-res-handwriting-font
+https://opengameart.org/content/bitscript-true-type-font
+
+The source pages expressly release both versions under CC0. Attribution is voluntary.

@@ -1,6 +1,7 @@
 package io.github.exco9.questlogenvelope.network.fabric;
 
 import io.github.exco9.questlogenvelope.network.ActivateMagicCircleC2SP;
+import io.github.exco9.questlogenvelope.network.SignLetterC2SP;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
@@ -24,5 +25,8 @@ public final class FabricMagicCircleNetworking {
                 ActivateMagicCircleC2SP.TYPE,
                 (payload, context) -> payload.handle(context.player())
         );
+        PayloadTypeRegistry.playC2S().register(SignLetterC2SP.TYPE, SignLetterC2SP.STREAM_CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SignLetterC2SP.TYPE,
+                (payload, context) -> payload.handle(context.player()));
     }
 }

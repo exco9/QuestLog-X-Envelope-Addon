@@ -2,6 +2,7 @@ package io.github.exco9.questlogenvelope.network.neoforge;
 
 import io.github.exco9.questlogenvelope.QuestlogEnvelope;
 import io.github.exco9.questlogenvelope.network.ActivateMagicCircleC2SP;
+import io.github.exco9.questlogenvelope.network.SignLetterC2SP;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -21,5 +22,7 @@ public final class NeoForgeMagicCircleNetworking {
                 ActivateMagicCircleC2SP.STREAM_CODEC,
                 (payload, context) -> payload.handle((ServerPlayer) context.player())
         );
+        registrar.playToServer(SignLetterC2SP.TYPE, SignLetterC2SP.STREAM_CODEC,
+                (payload, context) -> payload.handle((ServerPlayer) context.player()));
     }
 }

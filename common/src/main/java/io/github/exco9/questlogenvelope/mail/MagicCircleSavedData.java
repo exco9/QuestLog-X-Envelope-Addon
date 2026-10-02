@@ -75,6 +75,12 @@ public final class MagicCircleSavedData extends SavedData {
         return level.getServer().overworld().getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
+    /** Signature commands use the same one-shot storage format in an independent ledger. */
+    public static MagicCircleSavedData getSignatures(ServerLevel level) {
+        return level.getServer().overworld().getDataStorage().computeIfAbsent(FACTORY,
+                "questlog_envelope_signatures");
+    }
+
     public void register(
             UUID actionId,
             UUID owner,

@@ -43,6 +43,15 @@ public abstract class QuestEditorScreenMixin extends Screen {
     @Shadow(remap = false)
     NoShadowEditBox entryIconBox;
 
+    @Shadow(remap = false)
+    public abstract void saveTemporaryState();
+
+    @Shadow(remap = false)
+    private void saveEditingEntry() { throw new AssertionError(); }
+
+    @Shadow(remap = false)
+    private void saveQuestToServer() { throw new AssertionError(); }
+
     protected QuestEditorScreenMixin(Component title) {
         super(title);
     }
@@ -61,11 +70,17 @@ public abstract class QuestEditorScreenMixin extends Screen {
                     : "questlog_envelope.editor.letter.options");
 
             this.addRenderableWidget(Button.builder(label, button -> {
+                this.saveTemporaryState();
                 JsonObject workingCopy = questlogEnvelope$createWorkingCopy("grants_quest", false);
                 QuestEditorScreen parent = (QuestEditorScreen) (Object) this;
                 Screen editor = packageReward
                         ? new PackageRewardEditorScreen(parent, workingCopy)
-                        : new LetterRewardEditorScreen(parent, workingCopy);
+                        : new LetterRewardEditorScreen(parent, workingCopy, () -> {
+                            // Use Questlog's normal entry commit and server save, including nested rewards.
+                            this.saveTemporaryState();
+                            this.saveEditingEntry();
+                            this.saveQuestToServer();
+                        });
                 Minecraft.getInstance().setScreen(editor);
             }).bounds(panel2X + 15, panel2Y + 138, optionsWidth, 16).build());
 

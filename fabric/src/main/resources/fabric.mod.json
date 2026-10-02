@@ -17,6 +17,9 @@
   "mixins": [
     "questlog_envelope.mixins.json"
   ],
+  "suggests": {
+    "emberstextapi": ">=3.0.0"
+  },
   "depends": {
     "fabricloader": ">=0.16.9",
     "fabric-api": "*",

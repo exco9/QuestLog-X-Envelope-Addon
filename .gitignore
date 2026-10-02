@@ -7,3 +7,5 @@ runs/
 .idea/
 *.iml
 out/
+.architectury-transformer/
+**/logs/

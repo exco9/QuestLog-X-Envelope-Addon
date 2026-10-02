@@ -141,6 +141,40 @@ public final class MagicCircleTexture {
         RenderSystem.setShaderColor(red, green, blue, alpha);
     }
 
+    /** Persistent enchanted sweep uses the same tint and diagonal movement as signature ink. */
+    public static void renderActivated(GuiGraphics graphics, int x, int y, int size, int ink, int magicColor,
+                                      float fade, float particles, long now) {
+        renderTintedFill(graphics, x, y, size, 1, SignatureEffects.blend(ink, magicColor, fade));
+        float center = -size + (now % 2800L) / 2800F * size * 3;
+        ensureRegistered();
+        RenderSystem.enableBlend();
+        for (int band = 3; band >= 1; band--) {
+            setShaderColor(SignatureEffects.shineColor(magicColor), (band == 1 ? 0.39F : 0.14F) * fade);
+            for (int row = 0; row < size; row += 2) {
+                int left = Math.max(x, x + (int) (center - row * 0.6F) - band * 2);
+                int right = Math.min(x + size, x + (int) (center - row * 0.6F) + band * 2);
+                if (left >= right) continue;
+                graphics.enableScissor(left, y + row, right, y + Math.min(row + 2, size));
+                renderScaled(graphics, RUNTIME_MASK_TEXTURE, x, y, size);
+                graphics.disableScissor();
+            }
+        }
+        resetShaderColor();
+        RenderSystem.disableBlend();
+        if (particles >= 0 && particles < 1) {
+            float travel = 1 - (1 - particles) * (1 - particles);
+            int tint = (Math.round(255 * (1 - particles)) << 24) | SignatureEffects.shineColor(magicColor);
+            for (int i = 0; i < 12; i++) {
+                double angle = i * Math.PI / 6 + 0.2;
+                float radius = size * 0.4F + travel * (8 + (i % 3) * 3);
+                int sparkX = Math.round(x + size / 2F + (float) Math.cos(angle) * radius);
+                int sparkY = Math.round(y + size / 2F + (float) Math.sin(angle) * radius - travel * 3);
+                graphics.fill(sparkX - 1, sparkY, sparkX + 2, sparkY + 1, tint);
+                if (i % 2 == 0) graphics.fill(sparkX, sparkY - 1, sparkX + 1, sparkY + 2, tint);
+            }
+        }
+    }
+
     private static void resetShaderColor() {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }

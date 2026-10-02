@@ -1,15 +1,25 @@
 package io.github.exco9.questlogenvelope.mixin;
 
 import io.github.exco9.questlogenvelope.client.MagicCircleTexture;
+import io.github.exco9.questlogenvelope.client.SignatureRenderer;
+import io.github.exco9.questlogenvelope.client.SignatureSigningSession;
+import io.github.exco9.questlogenvelope.mail.LetterSignature;
+import io.github.exco9.questlogenvelope.mail.SignatureActions;
 import io.github.exco9.questlogenvelope.mail.QuestMagicCircle;
 import io.github.exco9.questlogenvelope.network.MagicCircleNetworking;
+import io.github.exco9.questlogenvelope.network.SignatureNetworking;
 import io.github.mortuusars.envelope.client.gui.screen.LetterViewScreen;
 import io.github.mortuusars.envelope.util.ItemAndStack;
 import io.github.mortuusars.envelope.world.item.LetterItem;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
@@ -55,6 +65,8 @@ public abstract class LetterViewScreenMixin {
 
     @Unique
     private boolean questlogEnvelope$wasActivated;
+    @Unique
+    private boolean questlogEnvelope$circleStateObserved;
 
     @Unique
     private long questlogEnvelope$holdStartedAt;
@@ -65,6 +77,12 @@ public abstract class LetterViewScreenMixin {
     @Unique
     private long questlogEnvelope$activationFlashStartedAt;
 
+    @Unique
+    private final SignatureSigningSession questlogEnvelope$writing = new SignatureSigningSession();
+
+    @Unique
+    private @Nullable SoundInstance questlogEnvelope$writingSound;
+
     @Inject(method = "render", at = @At("TAIL"), remap = false)
     private void questlogEnvelope$renderMagicCircle(
             GuiGraphics graphics,
@@ -73,6 +91,36 @@ public abstract class LetterViewScreenMixin {
             float partialTick,
             CallbackInfo ci
     ) {
+        LetterSignature signature = LetterSignature.read(this.letter.getItemStack());
+        long signatureNow = Util.getMillis();
+        boolean signed = questlogEnvelope$isSignatureSigned(signature);
+        this.questlogEnvelope$writing.observeSigned(signatureNow, signed);
+        if (this.questlogEnvelope$writing.shouldCommit(signatureNow)) {
+            if (questlogEnvelope$isCurrentLetter(signature)) {
+                SignatureNetworking.sign(this.hand, signature,
+                        SignatureActions.getActionId(this.letter.getItemStack()).map(UUID::toString).orElse(""));
+                this.questlogEnvelope$writing.requested(signatureNow);
+            } else {
+                this.questlogEnvelope$writing.reset();
+            }
+        }
+        if (!this.questlogEnvelope$writing.isWriting(signatureNow) && this.questlogEnvelope$writingSound != null) {
+            Minecraft.getInstance().getSoundManager().stop(this.questlogEnvelope$writingSound);
+            this.questlogEnvelope$writingSound = null;
+        }
+        SignatureRenderer.Bounds signatureBox = SignatureRenderer.renderReceived(graphics, Minecraft.getInstance().font,
+                signature, this.leftPos + 17, this.topPos + 21, this.questlogEnvelope$writing.progress(signatureNow),
+                this.questlogEnvelope$writing.isWriting(signatureNow), signed || this.questlogEnvelope$writing.isPending(signatureNow), signed,
+                this.questlogEnvelope$writing.magicProgress(signatureNow),
+                this.questlogEnvelope$writing.particleProgress(signatureNow), signatureNow);
+        if (signature.enabled() && signatureBox.contains(mouseX, mouseY)
+                && (!QuestMagicCircle.has(this.letter.getItemStack()) || !questlogEnvelope$isInsideCircle(mouseX, mouseY))
+                && !this.questlogEnvelope$writing.isWriting(signatureNow)) {
+            String hint = signed ? "signed" : this.questlogEnvelope$writing.isPending(signatureNow) ? "pending"
+                    : questlogEnvelope$isCurrentLetter(signature) ? "write_hint" : "hold_hint";
+            graphics.renderTooltip(Minecraft.getInstance().font,
+                    Component.translatable("questlog_envelope.signature." + hint), mouseX, mouseY);
+        }
         Optional<UUID> actionId = QuestMagicCircle.getActionId(this.letter.getItemStack());
         if (actionId.isEmpty()) {
             questlogEnvelope$resetAllState();
@@ -82,29 +130,35 @@ public abstract class LetterViewScreenMixin {
         int size = questlogEnvelope$circleSize();
         int x = questlogEnvelope$circleX();
         int y = questlogEnvelope$circleY();
-        int color = QuestMagicCircle.getColor(this.letter.getItemStack());
+        int color = QuestMagicCircle.getColor(questlogEnvelope$circleStack());
+        int magicColor = QuestMagicCircle.getMagicColor(questlogEnvelope$circleStack());
         long now = Util.getMillis();
 
         MagicCircleTexture.render(graphics, x, y, size);
 
-        boolean activated = QuestMagicCircle.isActivated(this.letter.getItemStack());
+        boolean activated = QuestMagicCircle.isActivated(questlogEnvelope$circleStack());
         if (activated) {
-            if (!this.questlogEnvelope$wasActivated) {
+            if (!this.questlogEnvelope$wasActivated && this.questlogEnvelope$circleStateObserved) {
                 this.questlogEnvelope$activationFlashStartedAt = now;
             }
             this.questlogEnvelope$wasActivated = true;
+            this.questlogEnvelope$circleStateObserved = true;
             this.questlogEnvelope$activationSent = false;
             questlogEnvelope$resetHold();
 
-            MagicCircleTexture.renderTintedFill(graphics, x, y, size, 1.0F, color);
+            long age = now - this.questlogEnvelope$activationFlashStartedAt;
+            float fade = this.questlogEnvelope$activationFlashStartedAt == 0 ? 1 : Math.min(1, Math.max(0, age / 650F));
+            float particles = this.questlogEnvelope$activationFlashStartedAt == 0 ? -1 : age / 850F;
+            MagicCircleTexture.renderActivated(graphics, x, y, size, color, magicColor, fade, particles, now);
             long flashAge = now - this.questlogEnvelope$activationFlashStartedAt;
             if (flashAge >= 0L && flashAge < QUESTLOG_ENVELOPE$ACTIVATION_FLASH_MS) {
                 float pulse = 1.0F - flashAge / (float) QUESTLOG_ENVELOPE$ACTIVATION_FLASH_MS;
-                MagicCircleTexture.renderGlow(graphics, x, y, size, color, pulse);
+                MagicCircleTexture.renderGlow(graphics, x, y, size, magicColor, pulse);
             }
             return;
         }
         this.questlogEnvelope$wasActivated = false;
+        this.questlogEnvelope$circleStateObserved = true;
 
         // Keep the circle visually complete for a short round-trip window after
         // sending the payload. If the server rejects it, the client naturally
@@ -161,19 +215,70 @@ public abstract class LetterViewScreenMixin {
             int button,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        if (button != 0 || this.hand == null || !questlogEnvelope$isInsideCircle(mouseX, mouseY)) {
+        if (button != 0) {
             return;
         }
 
-        if (!QuestMagicCircle.has(this.letter.getItemStack())
-                || QuestMagicCircle.isActivated(this.letter.getItemStack())
-                || this.questlogEnvelope$activationSent) {
+        // Circle actions retain priority if the two decorations overlap.
+        if (QuestMagicCircle.has(this.letter.getItemStack()) && questlogEnvelope$isInsideCircle(mouseX, mouseY)) {
+            if (this.hand == null || QuestMagicCircle.isActivated(questlogEnvelope$circleStack())
+                    || this.questlogEnvelope$activationSent) return;
+            this.questlogEnvelope$holdingCircle = true;
+            this.questlogEnvelope$holdStartedAt = Util.getMillis();
+            cir.setReturnValue(true);
             return;
         }
 
-        this.questlogEnvelope$holdingCircle = true;
-        this.questlogEnvelope$holdStartedAt = Util.getMillis();
-        cir.setReturnValue(true);
+        LetterSignature signature = LetterSignature.read(this.letter.getItemStack());
+        if (signature.enabled() && SignatureRenderer.bounds(Minecraft.getInstance().font, signature,
+                this.leftPos + 17, this.topPos + 21).contains(mouseX, mouseY)) {
+            if (questlogEnvelope$isCurrentLetter(signature)
+                    && this.questlogEnvelope$writing.start(Util.getMillis(), questlogEnvelope$isSignatureSigned(signature))) {
+                var sounds = Minecraft.getInstance().getSoundManager();
+                if (this.questlogEnvelope$writingSound != null) sounds.stop(this.questlogEnvelope$writingSound);
+                this.questlogEnvelope$writingSound = SimpleSoundInstance.forUI(
+                        SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, 1.0F, 0.45F);
+                sounds.play(this.questlogEnvelope$writingSound);
+            }
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Unique
+    private boolean questlogEnvelope$isCurrentLetter(LetterSignature signature) {
+        var player = Minecraft.getInstance().player;
+        return this.hand != null && player != null
+                && player.getItemInHand(this.hand).getItem() instanceof LetterItem
+                && LetterSignature.read(player.getItemInHand(this.hand)).equals(signature)
+                && SignatureActions.getActionId(player.getItemInHand(this.hand))
+                        .equals(SignatureActions.getActionId(this.letter.getItemStack()));
+    }
+
+    @Unique
+    private boolean questlogEnvelope$isSignatureSigned(LetterSignature signature) {
+        if (LetterSignature.isSigned(this.letter.getItemStack())) return true;
+        return questlogEnvelope$isCurrentLetter(signature)
+                && LetterSignature.isSigned(Minecraft.getInstance().player.getItemInHand(this.hand));
+    }
+
+    @Inject(method = "onClose", at = @At("HEAD"), remap = false)
+    private void questlogEnvelope$stopWriting(CallbackInfo ci) {
+        this.questlogEnvelope$writing.reset();
+        if (this.questlogEnvelope$writingSound != null) {
+            Minecraft.getInstance().getSoundManager().stop(this.questlogEnvelope$writingSound);
+            this.questlogEnvelope$writingSound = null;
+        }
+    }
+
+    @Unique
+    private ItemStack questlogEnvelope$circleStack() {
+        var player = Minecraft.getInstance().player;
+        if (player != null && this.hand != null) {
+            ItemStack held = player.getItemInHand(this.hand);
+            var id = QuestMagicCircle.getActionId(this.letter.getItemStack());
+            if (id.isPresent() && id.equals(QuestMagicCircle.getActionId(held))) return held;
+        }
+        return this.letter.getItemStack();
     }
 
     @Unique
@@ -213,6 +318,7 @@ public abstract class LetterViewScreenMixin {
         questlogEnvelope$resetHold();
         this.questlogEnvelope$activationSent = false;
         this.questlogEnvelope$wasActivated = false;
+        this.questlogEnvelope$circleStateObserved = false;
         this.questlogEnvelope$activationRequestSentAt = 0L;
         this.questlogEnvelope$activationFlashStartedAt = 0L;
     }
