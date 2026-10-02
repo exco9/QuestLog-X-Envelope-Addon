@@ -45,17 +45,17 @@ The compatibility types are registered through Questlog's objective/reward regis
 
 ### Receive quest mail
 
-Use **Mail Received / Courrier reçu** (`questlog_envelope:mail_received`) as an objective or prerequisite when a quest should react to marked mail delivered by the addon.
+Use **Mail Received** (`questlog_envelope:mail_received`) as an objective or prerequisite when a quest should react to marked mail delivered by the addon.
 
 The optional `quest` field selects the expected quest marker. When omitted, the objective uses its own parent quest ID. Delivered markers are persisted so a letter received while the target player is offline can still progress the quest after their Questlog state loads.
 
 ### Send matching mail
 
-Use **Mail Sent / Courrier envoyé** (`questlog_envelope:mail_sent`) as an objective or prerequisite.
+Use **Mail Sent** (`questlog_envelope:mail_sent`) as an objective or prerequisite.
 
 The event is recorded only when a player actually dispatches mail from an Envelope mailbox with a pigeon. Addon-generated service/reward mail is excluded.
 
-Questlog's normal target field configures the recipient and `required_amount` configures how many matching pieces are required. **Mail filters... / Filtres du courrier...** adds optional filters for:
+Questlog's normal target field configures the recipient and `required_amount` configures how many matching pieces are required. **Mail filters...** adds optional filters for:
 
 - mail type: any, letter, or package;
 - text a letter must contain;
@@ -88,7 +88,7 @@ Letter-content example:
 
 ## Envelope letter rewards
 
-Add **Envelope Letter / Lettre Envelope** (`questlog_envelope:letter`) as a Questlog reward. The editor supports sender, title, rich text, auto-claim, Envelope wax seals, optional `grants_quest`, and the addon magic-circle mechanic.
+Add **Envelope Letter** (`questlog_envelope:letter`) as a Questlog reward. The editor supports sender, title, rich text, auto-claim, Envelope wax seals, optional `grants_quest`, and the addon magic-circle mechanic.
 
 The letter editor reuses Envelope's writable-paper presentation and text formatting behavior. Selecting text exposes formatting for bold, italic, underline, strikethrough, and colors.
 
@@ -175,7 +175,7 @@ default `#AA55FF`), then retain a tinted diagonal glint. A radial sparkle burst
 plays once on a fresh server-confirmed activation, never when reopening a used letter.
 The initial fill color and final magical color can be configured separately.
 
-A letter reward can enable an interactive **Magic circle / Cercle magique** independently of its wax seal.
+A letter reward can enable an interactive **Magic circle** independently of its wax seal.
 
 The editor previews the circle directly on the writable paper. The center handle moves it, the upper-left handle resizes it, Shift enables snapping, and the reset button restores the default bottom-right layout.
 
@@ -211,7 +211,7 @@ The circle artwork is a replaceable Minecraft resource at `assets/questlog_envel
 
 ## Envelope package rewards
 
-Add **Envelope Package / Colis Envelope** (`questlog_envelope:package`) as a reward.
+Add **Envelope Package** (`questlog_envelope:package`) as a reward.
 
 The visual editor uses Envelope's six-slot package layout plus the player's current inventory. Clicking an inventory stack copies it into reward configuration without modifying the real inventory. Additional pages create additional physical packages, and packages can use normal Envelope wax seals.
 
