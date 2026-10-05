@@ -12,7 +12,7 @@ Current target:
 
 The addon keeps Questlog as the quest system and Envelope as the physical mail system. Quest progression is driven through Questlog's native objective/reward model, while visible mail deliveries use Envelope's mail, addressing, mailbox, and pigeon behavior.
 
-See [`SYNTHESIS.md`](../SYNTHESIS.md) for the technical architecture and [`TESTING.md`](../TESTING.md) for the release regression matrix.
+See [`SYNTHESIS.md`](SYNTHESIS.md) for the technical architecture and [`TESTING.md`](TESTING.md) for the release regression matrix.
 
 ## Installation
 
@@ -207,7 +207,7 @@ When the player opens the delivered letter and holds the circle for the configur
 }
 ```
 
-The circle artwork is a replaceable Minecraft resource at `assets/questlog_envelope/textures/gui/magic_circle.png`. Fabric and NeoForge invalidate the generated tint-mask cache on client resource reload.
+The circle artwork is a replaceable Minecraft resource at `assets/questlog_envelope/textures/gui/magic_circle.png`. Fabric and NeoForge invalidate the tint-mask cache on client resource reload.
 
 ## Envelope package rewards
 
@@ -250,7 +250,7 @@ Invalid or unavailable configured sender services fall back to Envelope's normal
 
 ## Building
 
-A Gradle wrapper is committed/generated for reproducible local builds. With Java 21 installed:
+The committed Gradle wrapper supports reproducible local builds. With Java 21 installed:
 
 ```bash
 ./gradlew build --stacktrace
@@ -265,14 +265,14 @@ GitHub Actions builds pull requests and pushes to `main` and `dev/**`, then reta
 
 The automated build is only the first release gate. Minecraft integration behavior should also be exercised in-game on **both Fabric and NeoForge**.
 
-Follow [`TESTING.md`](../TESTING.md), which covers startup, editor registration, online/offline quest mail, sent-mail filters, letters, packages, seals, formatting, magic-circle validation/anti-replay, persistence, mailbox fallbacks, dimensions, resource reload, and localization.
+Follow [`TESTING.md`](TESTING.md), which covers startup, editor registration, online/offline quest mail, sent-mail filters, letters, packages, seals, formatting, magic-circle validation/anti-replay, persistence, mailbox fallbacks, dimensions, resource reload, and localization.
 
 ## Releases
 
 Before creating a release:
 
 1. complete the regression matrix on both loaders;
-2. update [`CHANGELOG.md`](../CHANGELOG.md);
+2. update [`CHANGELOG.md`](CHANGELOG.md);
 3. set `mod_version` in `gradle.properties` to the release version without `-SNAPSHOT`;
 4. push the release commit and confirm CI is green;
 5. create/push a matching tag such as `v0.1.0`.

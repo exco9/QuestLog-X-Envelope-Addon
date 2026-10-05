@@ -9,3 +9,4 @@ runs/
 out/
 .architectury-transformer/
 **/logs/
+__pycache__/
