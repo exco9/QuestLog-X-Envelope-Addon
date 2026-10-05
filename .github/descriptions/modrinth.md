@@ -6,11 +6,9 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 **Minecraft 1.21.1 · Fabric & NeoForge · Java 21**
 
-[Download v0.1.0](https://github.com/exco9/QuestLog-X-Envelope-Addon/releases/tag/v0.1.0) · [Configuration guide](https://github.com/exco9/QuestLog-X-Envelope-Addon/blob/main/GUIDE.md)
-
 ## What can you do?
 
-![Quest letters, package rewards, magic circles and player signatures](https://raw.githubusercontent.com/exco9/QuestLog-X-Envelope-Addon/main/.github/images/features.png)
+![Quest letters, package rewards, magic circles and player signatures](FEATURE_IMAGE_URL)
 
 - **Letters and packages:** deliver quest invitations, rewards and supplies through Envelope, with rich text, wax seals and multi-page packages.
 - **Magic circles:** hold to unlock a quest or run a command, with configurable position, size, colors and enchanted shine.
@@ -43,6 +41,4 @@ With Ember installed, try `<wave>Welcome to the guild!</wave>` in the letter bod
 
 Install **one** addon jar matching your loader, alongside **Questlog 3.3.2**, **Envelope 0.7.5**, and their dependencies for Minecraft 1.21.1. Add Ember's Text API 3.x if you want its text effects.
 
-[Full setup & JSON examples](https://github.com/exco9/QuestLog-X-Envelope-Addon/blob/main/GUIDE.md) · [Changelog](https://github.com/exco9/QuestLog-X-Envelope-Addon/blob/main/CHANGELOG.md) · [Testing](https://github.com/exco9/QuestLog-X-Envelope-Addon/blob/main/TESTING.md)
-
-Licensed under [GPL-3.0](https://github.com/exco9/QuestLog-X-Envelope-Addon/blob/main/LICENSE).
+Licensed under **GPL-3.0**.
