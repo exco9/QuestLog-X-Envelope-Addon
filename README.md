@@ -1,4 +1,4 @@
-![QuestLog × Envelope — quests delivered by mail](.github/images/banner.png)
+![QuestLog × Envelope — quests delivered by mail](https://media.forgecdn.net/attachments/description/null/description_883335d8-a9df-4b5e-bf0b-a41ddd9135b7.png)
 
 # QuestLog × Envelope Addon
 
