@@ -18,11 +18,7 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 Mail transport, mailboxes, pigeons and wax seals come from **Envelope**; quest progression comes from **Questlog**.
 
-## A few quest ideas
-
-- **The academy invitation:** deliver a letter; activating its circle unlocks the next assignment.
-- **The signed contract:** use `@s` for the recipient's name and run a command when they sign. Each signature can be used once.
-- **The supply run:** ask players to mail three diamonds to a chosen address, then reward them with a package of supplies.
+## Letter reward example
 
 For example, this **letter reward** adds a framed signature and announces the signer:
 

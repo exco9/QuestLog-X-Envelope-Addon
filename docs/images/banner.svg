@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="270" viewBox="0 0 960 270" role="img" aria-labelledby="title">
-<title id="title">QuestLog × Envelope — quests delivered by mail</title>
-<defs><linearGradient id="paper" x2="0" y2="1"><stop stop-color="#f5e8d1"/><stop offset="1" stop-color="#e8d3b1"/></linearGradient></defs>
-<rect width="960" height="270" rx="16" fill="#24251f"/><path d="M0 234H960V270H0Z" fill="#191c18"/><path d="M0 238H960" stroke="#9e7946" stroke-width="4"/><g transform="translate(48 68) scale(1.4)"><g stroke="#8c6638" stroke-width="5" stroke-linejoin="miter">
-<path fill="#b78a4c" d="M6 26H90V86H6Z"/><path fill="#f1d79a" d="M0 20H84V80H0Z"/>
-<path fill="#ddba73" d="M0 80L42 46L84 80Z"/><path fill="#ffe6ad" d="M0 20L42 53L84 20Z"/>
-</g><path fill="#933d40" d="M34 43H50V47H54V61H50V65H34V61H30V47H34Z"/><path fill="#c46659" d="M35 47H47V51H35Z"/></g><text x="205" y="106" font-family="Verdana, sans-serif" font-size="53" font-weight="bold" fill="#f6c46d">QUESTLOG</text><text x="207" y="155" font-family="Verdana, sans-serif" font-size="37" font-weight="bold" fill="#f1e3cb">× ENVELOPE</text><text x="208" y="194" font-family="Verdana, sans-serif" font-size="18" font-weight="normal" fill="#cbbc9f">Deliver a story. Seal a promise. Sign your next quest.</text><text x="48" y="257" font-family="Verdana, sans-serif" font-size="13" font-weight="normal" fill="#cbbc9f">MINECRAFT 1.21.1  /  FABRIC + NEOFORGE</text></svg>

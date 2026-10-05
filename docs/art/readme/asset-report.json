@@ -1,0 +1,46 @@
+{
+  "assets/questlog_envelope/textures/gui/sprites/readme/banner.png": {
+    "size": [
+      960,
+      300
+    ],
+    "rgba_colors": 33,
+    "visible_rgb_colors": 33,
+    "alpha_values": [
+      255
+    ]
+  },
+  "assets/questlog_envelope/textures/gui/sprites/readme/banner_native.png": {
+    "size": [
+      480,
+      150
+    ],
+    "rgba_colors": 33,
+    "visible_rgb_colors": 33,
+    "alpha_values": [
+      255
+    ]
+  },
+  "assets/questlog_envelope/textures/gui/sprites/readme/features.png": {
+    "size": [
+      960,
+      904
+    ],
+    "rgba_colors": 76,
+    "visible_rgb_colors": 76,
+    "alpha_values": [
+      255
+    ]
+  },
+  "assets/questlog_envelope/textures/gui/sprites/readme/features_native.png": {
+    "size": [
+      480,
+      452
+    ],
+    "rgba_colors": 76,
+    "visible_rgb_colors": 76,
+    "alpha_values": [
+      255
+    ]
+  }
+}
