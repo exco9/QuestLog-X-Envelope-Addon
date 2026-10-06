@@ -41,8 +41,9 @@ def prepare(source: Path, artifacts: Path, tag: str, loader: str):
 
 
 if __name__ == "__main__":
+    loader = os.environ["LOADER"]
     artifact, version, minecraft, changelog = prepare(
-        Path(sys.argv[1]), Path(sys.argv[2]), os.environ["RELEASE_TAG"], os.environ["LOADER"])
+        Path(sys.argv[1]), Path(sys.argv[2]), os.environ["RELEASE_TAG"], loader)
     Path("platform-changelog.md").write_text(changelog + "\n", encoding="utf-8")
     outputs = f"file={artifact.as_posix()}\nversion={version}\nminecraft={minecraft}\n"
     if os.environ.get("GITHUB_OUTPUT"):

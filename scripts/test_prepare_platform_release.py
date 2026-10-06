@@ -1,6 +1,9 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -40,6 +43,18 @@ class ReleaseValidationTest(unittest.TestCase):
     def test_neoforge_release_metadata(self):
         self.artifact("neoforge")
         release.prepare(self.source, self.artifacts, "v0.1.2", "neoforge")
+
+    def test_command_line_writes_outputs_and_finishes_successfully(self):
+        self.artifact()
+        output = self.root / "outputs"
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("prepare-platform-release.py").resolve()),
+             str(self.source), str(self.artifacts)], cwd=self.root, capture_output=True, text=True,
+            env={**os.environ, "RELEASE_TAG": "v0.1.2", "LOADER": "fabric", "GITHUB_OUTPUT": str(output)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("minecraft=1.21.1", output.read_text())
+        self.assertIn("Validated", result.stdout)
+        self.assertEqual((self.root / "platform-changelog.md").read_text(), "New cargo.\n")
 
     def test_wrong_tag_fails(self):
         self.artifact()
