@@ -57,3 +57,10 @@ jobs:
               --title "${GITHUB_REF_NAME}" \
               --generate-notes
           fi
+
+  publish-platforms:
+    needs: release
+    uses: ./.github/workflows/publish-platforms.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit

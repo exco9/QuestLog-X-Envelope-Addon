@@ -1,0 +1,114 @@
+name: Publish CurseForge and Modrinth
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag
+        required: true
+        default: v0.1.2
+        type: string
+      dry_run:
+        description: Validate files and metadata without uploading
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      dry_run:
+        default: false
+        type: boolean
+    secrets:
+      MODRINTH_TOKEN:
+        required: false
+      CURSEFORGE_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-publication-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate configuration
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        shell: bash
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Expected a release tag such as v0.1.2.' >&2; exit 1; }
+          if [[ "$DRY_RUN" != true ]]; then
+            [[ "$MODRINTH_PROJECT_ID" =~ ^[A-Za-z0-9]{8}$ ]] || { echo 'Set repository variable MODRINTH_PROJECT_ID.' >&2; exit 1; }
+            [[ "$CURSEFORGE_PROJECT_ID" =~ ^[0-9]+$ ]] || { echo 'Set repository variable CURSEFORGE_PROJECT_ID.' >&2; exit 1; }
+            [[ -n "$MODRINTH_TOKEN" && -n "$CURSEFORGE_TOKEN" ]] || { echo 'Add separate MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets.' >&2; exit 1; }
+          fi
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [modrinth, curseforge]
+        loader: [fabric, neoforge]
+    steps:
+      - name: Checkout publishing tools
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: publishing-tools
+
+      - name: Checkout released source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.release_tag }}
+          path: released-source
+
+      - name: Download release artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          LOADER: ${{ matrix.loader }}
+        run: gh release download "$RELEASE_TAG" --pattern "questlog-envelope-addon-${LOADER}-*.jar" --dir artifacts
+
+      - name: Validate release and prepare metadata
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          LOADER: ${{ matrix.loader }}
+        run: python3 publishing-tools/scripts/prepare-platform-release.py released-source artifacts
+
+      - name: Publish loader version
+        if: ${{ !inputs.dry_run }}
+        uses: Kira-NT/mc-publish@52307b03863581dec6b652b83e597aec02ebb075 # v3.3
+        with:
+          modrinth-id: ${{ matrix.platform == 'modrinth' && vars.MODRINTH_PROJECT_ID || '' }}
+          modrinth-token: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
+          curseforge-id: ${{ matrix.platform == 'curseforge' && vars.CURSEFORGE_PROJECT_ID || '' }}
+          curseforge-token: ${{ matrix.platform == 'curseforge' && secrets.CURSEFORGE_TOKEN || '' }}
+          files: ${{ steps.metadata.outputs.file }}
+          name: QuestLog x Envelope ${{ steps.metadata.outputs.version }} (${{ matrix.loader }})
+          version: ${{ steps.metadata.outputs.version }}-${{ matrix.loader }}
+          version-type: release
+          loaders: ${{ matrix.loader }}
+          game-versions: ${{ steps.metadata.outputs.minecraft }}
+          java: '21'
+          environment: client | server
+          changelog-file: platform-changelog.md
+          dependencies: |
+            questlog(required){modrinth:ufQYCY6N}{curseforge:questlog}
+            envelope(required){modrinth:bINSbhYK}{curseforge:1281170}
+            ${{ matrix.loader == 'fabric' && 'fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}' || '' }}
+          retry-attempts: 1
+          fail-mode: fail
