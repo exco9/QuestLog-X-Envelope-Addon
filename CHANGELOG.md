@@ -4,6 +4,20 @@ All notable changes to QuestLog × Envelope Addon are documented here.
 
 The project follows Semantic Versioning for published releases where practical.
 
+## [0.1.2] - 2026-10-06
+
+### Changed
+
+- Letters and package pages rewarded together to the same player now share one Envelope courier. Each delivered item keeps its own contents, quest marker, signature and circle actions.
+- Cargo is persisted during transport. Partial delivery retries only remaining items; stale courier references cannot replay a completed lot. Mailbox overflow drops beside the mailbox.
+- Lots containing packages use express delivery; letter-only lots retain normal Envelope timing.
+
+### Validation
+
+- 54 common tests cover mail progression, cargo persistence, partial delivery, retries, stale references and quest progress reset.
+- Fabric LAN testing reported intact contents and no pigeon spawn lag. The local circle smoke fixture now uses an objective to prevent Questlog's empty-objective completion notice after reset.
+- Both loader builds are checked. Grouped-delivery gameplay on NeoForge, mailbox overflow and restart during transport remain unconfirmed in game.
+
 ## [0.1.1] - 2026-10-06
 
 ### Fixed

@@ -47,6 +47,19 @@ class QuestMailUnlockerTest {
         };
     }
 
+    @Test void mailObjectiveWaitsForNewActivationAfterProgressReset() {
+        var objective = mail(1);
+        var target = quest(List.of(), List.of(objective));
+        assertFalse(target.isCompleted());
+        assertTrue(QuestMailUnlocker.unlockQuests(List.of(target), ID));
+        assertTrue(target.isCompleted());
+        target.resetProgress();
+        assertFalse(target.isCompleted());
+        assertEquals(0, objective.getUnits());
+        assertTrue(QuestMailUnlocker.unlockQuests(List.of(target), ID));
+        assertTrue(target.isCompleted());
+    }
+
     @Test void progressesPrerequisite() {
         var prerequisite = mail(1);
         var quest = quest(List.of(prerequisite), List.of());

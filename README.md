@@ -6,7 +6,7 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 **Minecraft 1.21.1 · Fabric & NeoForge · Java 21**
 
-[Download v0.1.1](https://github.com/exco9/QuestLog-X-Envelope-Addon/releases/tag/v0.1.1) · [Configuration guide](GUIDE.md)
+[Download v0.1.2](https://github.com/exco9/QuestLog-X-Envelope-Addon/releases/tag/v0.1.2) · [Configuration guide](GUIDE.md)
 
 ## What can you do?
 

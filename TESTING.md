@@ -17,6 +17,13 @@ GitHub Actions runs the same checks for pull requests and pushes to `main` or `d
 
 ## In-game regression matrix
 
+### Grouped delivery candidate — 2026-10-06
+
+- Automated checks: 54 common tests passed, including cargo save/reload, partial delivery, courier retry, stale references and mail-objective progress reset. Both loader builds passed before the additional reset test.
+- Fabric LAN: the tester reported successful delivery, intact letter contents and no spawn lag. Signature and circle commands appear in the client log. Mailbox overflow and restart during transport have not yet been confirmed in game for this candidate.
+- The local `Smoke: Circle target` fixture originally had only a prerequisite and no objectives. Questlog 3.3.2 considers an empty objective list completed and sends completion again after reset. The fixture now uses `mail_received` as an objective, so it waits for circle activation; the reset behavior is covered by an automated test.
+- Grouped delivery on NeoForge is awaiting tester feedback.
+
 ### Smoke run — 2026-10-06
 
 Test baseline: Minecraft 1.21.1, Java 21, Questlog 3.3.2, Envelope 0.7.5, Cloth Config 15.0.140; Fabric Loader 0.16.9 / Fabric API 0.107.0 and NeoForge 21.1.228. Ember and JEI were absent.

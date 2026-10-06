@@ -240,9 +240,9 @@ Legacy package definitions using `"items": [...]` remain supported.
 
 ## Delivery behavior
 
-Letters use Envelope's normal service-delivery timing when the player has a default mailbox.
+Letters and package pages rewarded together to the same player travel as one lot with one Envelope courier. Each letter and package remains a separate item, with its own contents, quest marker and one-time actions. Cargo is saved on the server while travelling.
 
-Quest reward packages use express mailbox delivery: an Envelope service pigeon performs the final recipient-side approach without the long simulated trip from the postal hub.
+Letter-only lots use Envelope's normal service-delivery timing when the player has a default mailbox. Lots containing packages use express mailbox delivery: an Envelope service pigeon performs the final recipient-side approach without the long simulated trip from the postal hub. If the mailbox fills during delivery, remaining items drop beside it.
 
 When the player has no linked mailbox in the Overworld, a service-pigeon/direct-delivery fallback completes the reward near the player. Outside the Overworld, where Envelope's `MailService` does not operate, reward mail uses the safe direct-drop fallback.
 

@@ -50,10 +50,19 @@ public final class QuestMailDelivery {
             @Nullable ResourceLocation senderId,
             boolean expressMailbox
     ) {
+        MailService service = MailService.of(player.getServer().overworld());
+        Address sender = resolveSender(service, senderId);
+        Mail.setSender(mail, sender);
+        Mail.writeToLog(mail, DeliveryRecord.sentFrom(sender));
+        GroupedMailDelivery.enqueue(player, mail, expressMailbox);
+    }
+
+    /** Starts the single carrier after the short reward collection window. */
+    static void dispatchNow(ServerPlayer player, ItemStack mail, boolean expressMailbox) {
         ServerLevel playerLevel = player.serverLevel();
         ServerLevel mailLevel = player.getServer().overworld();
         MailService service = MailService.of(mailLevel);
-        Address sender = resolveSender(service, senderId);
+        Address sender = Mail.getSenderOrElse(mail, service.getAddress());
         PlayerAddress recipient = new PlayerAddress(player);
 
         // Set it eagerly so even an emergency fallback keeps the configured sender.
@@ -178,14 +187,21 @@ public final class QuestMailDelivery {
      * being collected. The reward must never remain permanently unclaimable.
      */
     public static void dropImmediately(ServerPlayer player, ItemStack mail) {
+        boolean success = GroupedMailReference.isCarrier(mail)
+                ? GroupedMailDelivery.deliverImmediately(player, mail) : dropOneImmediately(player, mail);
+        if (!success) throw new IllegalStateException("Failed to drop Questlog mail");
+    }
+
+    static boolean dropOneImmediately(ServerPlayer player, ItemStack mail) {
         PlayerAddress recipient = new PlayerAddress(player);
         ItemStack delivered = Mail.asDelivered(mail.copyWithCount(1));
         QuestMailMarker.clearDirectPlayerDrop(delivered);
         Mail.writeToLog(delivered, DeliveryRecord.arrivedTo(recipient));
         Mail.setId(delivered, Id.create(player.level()));
 
-        player.drop(delivered, false);
+        if (player.drop(delivered, false) == null) return false;
         recordDelivered(player.getServer().overworld(), recipient.getString(), delivered);
+        return true;
     }
 
     /** Records a quest marker and applies it immediately when the player is online. */
@@ -198,7 +214,13 @@ public final class QuestMailDelivery {
                     .getPlayerByName(recipientName);
 
             if (player != null) {
-                QuestMailUnlocker.applyPending(player, questId);
+                try {
+                    QuestMailUnlocker.applyPending(player, questId);
+                } catch (RuntimeException exception) {
+                    // Physical delivery already succeeded. Keep its persisted marker,
+                    // without making the courier replay the same physical item.
+                    Envelope.LOGGER.error("Delivered quest mail progression is pending for {}.", recipientName, exception);
+                }
             }
         });
     }

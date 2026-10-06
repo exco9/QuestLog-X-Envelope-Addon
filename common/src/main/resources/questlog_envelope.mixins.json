@@ -6,6 +6,8 @@
   "mixins": [
     "BlockDropOffHandlerMixin",
     "DeliveryManagerMixin",
+    "MinecraftServerMixin",
+    "PigeonMixin",
     "PlayerDropOffHandlerMixin",
     "QuestlogEventsMixin"
   ],
