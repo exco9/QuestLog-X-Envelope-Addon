@@ -99,7 +99,11 @@ jobs:
                   if not matching:
                       print('Configured QLXE project is not visible in this token account project list.')
               except urllib.error.HTTPError as diagnostic_error:
-                  print(f'Token account/project diagnostic failed (HTTP {diagnostic_error.code}); check token permissions.')
+                  diagnostic = json.loads(diagnostic_error.read())
+                  error_code = diagnostic.get('error', 'unknown')
+                  if error_code not in {'invalid_token', 'invalid_scope', 'authentication_error', 'unauthorized'}:
+                      error_code = 'unknown'
+                  print(f'Token account/project diagnostic failed (HTTP {diagnostic_error.code}, {error_code}); check token permissions.')
               raise SystemExit(f'Modrinth project access failed (HTTP {error.code}); check project ID and token permissions.')
           if project['id'] != project_id or project['slug'] != 'qlxe':
               raise SystemExit('Modrinth project does not match the configured QLXE project.')
