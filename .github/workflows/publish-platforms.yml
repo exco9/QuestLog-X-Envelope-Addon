@@ -84,6 +84,22 @@ jobs:
               with urllib.request.urlopen(request, timeout=30) as response:
                   project = json.load(response)
           except urllib.error.HTTPError as error:
+              user_request = urllib.request.Request('https://api.modrinth.com/v2/user', headers=request.headers)
+              try:
+                  with urllib.request.urlopen(user_request, timeout=30) as response:
+                      user = json.load(response)
+                  print(f"Token account: {user['username']}")
+                  projects_request = urllib.request.Request(
+                      f"https://api.modrinth.com/v2/user/{user['id']}/projects", headers=request.headers)
+                  with urllib.request.urlopen(projects_request, timeout=30) as response:
+                      projects = json.load(response)
+                  matching = [p for p in projects if p['id'] == project_id or p['slug'] == 'qlxe']
+                  for candidate in matching:
+                      print(f"Account QLXE project: id={candidate['id']}, slug={candidate['slug']}, status={candidate['status']}")
+                  if not matching:
+                      print('Configured QLXE project is not visible in this token account project list.')
+              except urllib.error.HTTPError as diagnostic_error:
+                  print(f'Token account/project diagnostic failed (HTTP {diagnostic_error.code}); check token permissions.')
               raise SystemExit(f'Modrinth project access failed (HTTP {error.code}); check project ID and token permissions.')
           if project['id'] != project_id or project['slug'] != 'qlxe':
               raise SystemExit('Modrinth project does not match the configured QLXE project.')
