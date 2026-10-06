@@ -4,7 +4,7 @@ All notable changes to QuestLog × Envelope Addon are documented here.
 
 The project follows Semantic Versioning for published releases where practical.
 
-## [Unreleased]
+## [0.1.1] - 2026-10-06
 
 ### Fixed
 
@@ -14,6 +14,11 @@ The project follows Semantic Versioning for published releases where practical.
 ### Tests
 
 - Add nine regression tests using Questlog's actual quest and objective classes: prerequisite and objective traversal, multiple deliveries, nested groups, locked quests, pending-event consumption and save/reload isolation.
+
+### Known issues and validation limits
+
+- A brief lag spike was reported when five delivery pigeons spawned together on both loaders; its cause has not been profiled.
+- The focused Fabric/NeoForge smoke run passed with tester feedback. Dedicated-server startup, save and restart were observed; dedicated gameplay was reported working by the tester but was not confirmed in the prepared servers' connection logs. Ember-present rendering and the full regression matrix remain unverified.
 
 ## [0.1.0] - 2026-10-03
 

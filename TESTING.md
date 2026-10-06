@@ -28,6 +28,8 @@ Test baseline: Minecraft 1.21.1, Java 21, Questlog 3.3.2, Envelope 0.7.5, Cloth 
 
 This is a focused smoke pass, not a sign-off on every scenario below. Graphics variants, Ember-present coverage and the full release matrix remain separate checks.
 
+The tester subsequently reported LAN and dedicated-server gameplay working. The prepared dedicated servers' connection logs did not show those sessions, so the dedicated gameplay report is recorded as tester feedback rather than independently confirmed coverage.
+
 Repeat this matrix once on Fabric and once on NeoForge.
 
 | Area | Scenario | Expected result |
