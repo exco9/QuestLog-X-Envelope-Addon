@@ -59,7 +59,16 @@ def main():
                     return url
         return None
 
-    feature_url = matching_image(project.get("gallery", []))
+    readme = Path("README.md").read_text(encoding="utf-8")
+    existing = re.search(r"!\[Quest letters, package rewards, magic circles and player signatures\]\((https://cdn\.modrinth\.com/[^)]+)\)", readme)
+    feature_url = None
+    if existing:
+        # CDN images may be optimized, so their bytes differ from the source PNG.
+        with urllib.request.urlopen(existing.group(1), timeout=30) as response:
+            if response.headers.get_content_type().startswith("image/"):
+                feature_url = existing.group(1)
+    if not feature_url:
+        feature_url = matching_image(project.get("gallery", []))
     if not feature_url:
         query = urllib.parse.urlencode({"ext": "png", "featured": "false", "title": "Features",
                                         "description": "Quest letters, package rewards, magic circles and player signatures"})
@@ -69,7 +78,7 @@ def main():
     if not feature_url:
         raise ValueError("Could not verify uploaded feature image")
 
-    body = description(Path("README.md").read_text(encoding="utf-8"), feature_url)
+    body = description(readme, feature_url)
     for platform in ("modrinth", "curseforge"):
         (output / f"{platform}.md").write_text(body, encoding="utf-8")
     (output / "feature-url.txt").write_text(feature_url + "\n", encoding="utf-8")
