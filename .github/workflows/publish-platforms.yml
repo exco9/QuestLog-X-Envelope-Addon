@@ -54,6 +54,28 @@ jobs:
             [[ -n "$MODRINTH_TOKEN" && -n "$CURSEFORGE_TOKEN" ]] || { echo 'Add separate MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets.' >&2; exit 1; }
           fi
 
+      - name: Verify Modrinth project access
+        if: ${{ !inputs.dry_run }}
+        env:
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        shell: python
+        run: |
+          import json, os, urllib.request, urllib.error
+          project_id = os.environ['MODRINTH_PROJECT_ID']
+          request = urllib.request.Request(
+              f'https://api.modrinth.com/v2/project/{project_id}',
+              headers={'Authorization': os.environ['MODRINTH_TOKEN'],
+                       'User-Agent': 'exco9/QuestLog-X-Envelope-Addon/release-workflow'})
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  project = json.load(response)
+          except urllib.error.HTTPError as error:
+              raise SystemExit(f'Modrinth project access failed (HTTP {error.code}); check project ID and token permissions.')
+          if project['id'] != project_id or project['slug'] != 'qlxe':
+              raise SystemExit('Modrinth project does not match the configured QLXE project.')
+          print(f"Verified Modrinth project: {project['title']} ({project_id})")
+
   publish:
     needs: validate
     runs-on: ubuntu-latest
