@@ -18,7 +18,7 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 Mail transport, mailboxes, pigeons and wax seals come from **Envelope**; quest progression comes from **Questlog**.
 
-![Showcase gif](https://i.ibb.co/hRg62wvy/playtest.gif)
+![Showcase gif](https://raw.githubusercontent.com/exco9/qlxe-media/main/playtest.gif)
 
 ## Letter reward example
 
