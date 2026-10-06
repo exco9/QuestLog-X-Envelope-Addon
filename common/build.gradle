@@ -15,6 +15,7 @@ dependencies {
 
     testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation("maven.modrinth:ufQYCY6N:${rootProject.questlog_neoforge_version_id}") { transitive = false }
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

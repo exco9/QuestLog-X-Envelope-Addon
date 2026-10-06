@@ -6,7 +6,7 @@ import org.infernalstudios.questlog.core.quests.objectives.Objective;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Questlog objective intended primarily for use as a prerequisite.
+ * Questlog objective usable as either a prerequisite or a regular objective.
  *
  * A marked Envelope letter completes this objective when its quest marker matches either:
  * - the explicit `quest` field; or

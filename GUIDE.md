@@ -160,7 +160,7 @@ The bundled **BitScript** pixel handwriting font (devurandom / usr_share;
 TrueType conversion by William.Thompsonj) is released under **CC0**:
 [original bitmap](https://opengameart.org/content/bitscript-a-low-res-handwriting-font),
 [TrueType font](https://opengameart.org/content/bitscript-true-type-font).
-Credits/license information ships at `assets/questlog_envelope/font/BitScript-LICENSE.txt`.
+Credits/license information ships at `assets/questlog_envelope/font/bitscript-license.txt`.
 A bitmap atlas copies the original CC0 Grafx2 pixel glyphs directly, avoiding
 broken strokes from rasterizing the TrueType conversion. Normal-size glyphs
 use whole physical pixels at the current GUI scale. Minecraft's default font supplies

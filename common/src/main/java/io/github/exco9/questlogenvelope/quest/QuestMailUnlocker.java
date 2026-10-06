@@ -11,7 +11,7 @@ import org.infernalstudios.questlog.core.quests.objectives.Objective;
 
 import java.util.List;
 
-/** Bridges persisted Envelope deliveries into Questlog's native prerequisite progression. */
+/** Applies each persisted Envelope delivery to all matching Questlog prerequisites and objectives. */
 public final class QuestMailUnlocker {
     private QuestMailUnlocker() {
     }
@@ -25,12 +25,20 @@ public final class QuestMailUnlocker {
 
     public static void applyPending(ServerPlayer player, ResourceLocation mailQuestId) {
         PendingQuestMailSavedData data = PendingQuestMailSavedData.get(mailDataLevel(player));
+        if (ServerPlayerManager.INSTANCE == null) {
+            return;
+        }
+        QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
+        applyPending(data, player.getScoreboardName(), mailQuestId, manager.getAllQuests());
+    }
 
-        while (data.getCount(player.getScoreboardName(), mailQuestId) > 0) {
-            if (!unlockOne(player, mailQuestId)) {
+    static void applyPending(PendingQuestMailSavedData data, String playerName,
+                             ResourceLocation mailQuestId, List<Quest> quests) {
+        while (data.getCount(playerName, mailQuestId) > 0) {
+            if (!unlockQuests(quests, mailQuestId)) {
                 return;
             }
-            data.consumeOne(player.getScoreboardName(), mailQuestId);
+            data.consumeOne(playerName, mailQuestId);
         }
     }
 
@@ -41,33 +49,30 @@ public final class QuestMailUnlocker {
         return player.getServer().overworld();
     }
 
-    private static boolean unlockOne(ServerPlayer player, ResourceLocation mailQuestId) {
-        if (ServerPlayerManager.INSTANCE == null) {
-            return false;
+    static boolean unlockQuests(List<Quest> quests, ResourceLocation mailQuestId) {
+        boolean progressed = false;
+        for (Quest quest : quests) {
+            progressed |= unlockRecursive(quest.prerequisites, mailQuestId);
+            progressed |= unlockRecursive(quest.objectives, mailQuestId);
         }
-
-        QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
-        for (Quest quest : manager.getAllQuests()) {
-            if (unlockRecursive(quest.prerequisites, mailQuestId)) {
-                return true;
-            }
-        }
-        return false;
+        return progressed;
     }
 
     private static boolean unlockRecursive(List<Objective> objectives, ResourceLocation mailQuestId) {
+        boolean progressed = false;
         for (Objective objective : objectives) {
             if (objective instanceof MailReceivedObjective mailReceived
                     && mailReceived.accepts(mailQuestId)
                     && !mailReceived.isCompleted()) {
+                int before = mailReceived.getUnits();
                 mailReceived.receive();
-                return true;
+                // Questlog can reject progression while prerequisites are unmet.
+                // A pending delivery must not be lost when no units changed.
+                progressed |= mailReceived.getUnits() > before;
             }
 
-            if (!objective.getChildren().isEmpty() && unlockRecursive(objective.getChildren(), mailQuestId)) {
-                return true;
-            }
+            progressed |= unlockRecursive(objective.getChildren(), mailQuestId);
         }
-        return false;
+        return progressed;
     }
 }

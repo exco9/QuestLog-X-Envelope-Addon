@@ -4,6 +4,17 @@ All notable changes to QuestLog × Envelope Addon are documented here.
 
 The project follows Semantic Versioning for published releases where practical.
 
+## [Unreleased]
+
+### Fixed
+
+- Apply each `mail_received` delivery to all matching prerequisites and regular objectives, including nested objectives and multiple quests. Keep queued deliveries when Questlog prerequisite gating prevents any progress.
+- Use lowercase paths for the bundled BitScript source atlas and license so Minecraft no longer rejects those resource entries.
+
+### Tests
+
+- Add nine regression tests using Questlog's actual quest and objective classes: prerequisite and objective traversal, multiple deliveries, nested groups, locked quests, pending-event consumption and save/reload isolation.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

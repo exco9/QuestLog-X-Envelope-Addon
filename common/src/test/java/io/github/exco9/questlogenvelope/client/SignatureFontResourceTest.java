@@ -48,7 +48,7 @@ class SignatureFontResourceTest {
 
     @Test
     void everyGlyphPreservesTheOriginalPixelStrokes() throws Exception {
-        var source = ImageIO.read(getClass().getResource("/assets/questlog_envelope/font/BitScript_r2.png"));
+        var source = ImageIO.read(getClass().getResource("/assets/questlog_envelope/font/bitscript_r2.png"));
         var atlas = ImageIO.read(getClass().getResource("/assets/questlog_envelope/textures/font/signature.png"));
         var starts = new java.util.ArrayList<Integer>();
         for (int x = 0; x < source.getWidth(); x++)

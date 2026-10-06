@@ -6,7 +6,7 @@ import javax.imageio.ImageIO;
 /** Run with `java scripts/GenerateSignatureFont.java` from the repository root. */
 class GenerateSignatureFont {
     public static void main(String[] args) throws Exception {
-        var source = ImageIO.read(new File("common/src/main/resources/assets/questlog_envelope/font/BitScript_r2.png"));
+        var source = ImageIO.read(new File("common/src/main/resources/assets/questlog_envelope/font/bitscript_r2.png"));
         var starts = new ArrayList<Integer>();
         // Only blue marks delimit glyphs. The black top of '$' is NOT a boundary.
         for (int x = 0; x < source.getWidth(); x++)

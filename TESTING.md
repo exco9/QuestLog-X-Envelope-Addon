@@ -17,6 +17,17 @@ GitHub Actions runs the same checks for pull requests and pushes to `main` or `d
 
 ## In-game regression matrix
 
+### Smoke run — 2026-10-06
+
+Test baseline: Minecraft 1.21.1, Java 21, Questlog 3.3.2, Envelope 0.7.5, Cloth Config 15.0.140; Fabric Loader 0.16.9 / Fabric API 0.107.0 and NeoForge 21.1.228. Ember and JEI were absent.
+
+- Automated checks: 44 common tests passed; both loader builds and distributable-jar packaging checks passed. Nine tests specifically cover `mail_received` with native Questlog classes.
+- Fabric: real client launch and world load succeeded. The tester reported no issues for the requested editor, letter, package, one-time signature/circle, reconnect/restart and mailbox/no-mailbox checklist. A small lag spike when five pigeons spawned together was reported; it has not been profiled or attributed to the addon.
+- Fabric dedicated server: real startup, loading four smoke quests, `questlog reload`, `save-all flush`, graceful `stop` and restart of the saved world succeeded. Multiplayer gameplay remains pending.
+- NeoForge: real client launch and world load succeeded. The tester reported the same gameplay checklist working normally, with the same lag spike at pigeon spawn. Dedicated startup, loading four smoke quests, `questlog reload`, `save-all flush`, graceful `stop` and restart of the saved world succeeded. Multiplayer gameplay remains pending.
+
+This is a focused smoke pass, not a sign-off on every scenario below. Graphics variants, Ember-present coverage and the full release matrix remain separate checks.
+
 Repeat this matrix once on Fabric and once on NeoForge.
 
 | Area | Scenario | Expected result |
