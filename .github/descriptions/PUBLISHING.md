@@ -16,6 +16,8 @@ Tokens must be separate secrets, not a combined value. Their values are never wr
 
 To publish an existing GitHub release, run **Publish CurseForge and Modrinth** from the Actions tab and enter its tag. The default **dry_run** checks artifacts, metadata and changelog without uploading. Disable it only for the actual upload. Configuration is checked before live uploads begin.
 
+The **platform** selector defaults to both destinations. Select a single platform to publish independently or recover when the other platform's credentials are unavailable. Modrinth tokens must allow reading the project (including a private draft) and creating versions.
+
 If an upload partially succeeds, use GitHub's **Re-run failed jobs** to retry failed platform/loader jobs; do not rerun successful uploads. CurseForge may require moderation before an uploaded file becomes public. An existing tag and GitHub release are never rebuilt or replaced by this workflow.
 
 Local validation:

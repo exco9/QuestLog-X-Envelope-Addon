@@ -12,6 +12,11 @@ on:
         description: Validate files and metadata without uploading
         default: true
         type: boolean
+      platform:
+        description: Destination to publish
+        default: both
+        type: choice
+        options: [both, modrinth, curseforge]
   workflow_call:
     inputs:
       release_tag:
@@ -20,6 +25,9 @@ on:
       dry_run:
         default: false
         type: boolean
+      platform:
+        default: both
+        type: string
     secrets:
       MODRINTH_TOKEN:
         required: false
@@ -41,6 +49,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
           DRY_RUN: ${{ inputs.dry_run }}
+          PLATFORM: ${{ inputs.platform }}
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -48,14 +57,18 @@ jobs:
         shell: bash
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Expected a release tag such as v0.1.2.' >&2; exit 1; }
+          [[ "$PLATFORM" == both || "$PLATFORM" == modrinth || "$PLATFORM" == curseforge ]] || { echo 'Unknown publication platform.' >&2; exit 1; }
           if [[ "$DRY_RUN" != true ]]; then
-            [[ "$MODRINTH_PROJECT_ID" =~ ^[A-Za-z0-9]{8}$ ]] || { echo 'Set repository variable MODRINTH_PROJECT_ID.' >&2; exit 1; }
-            [[ "$CURSEFORGE_PROJECT_ID" =~ ^[0-9]+$ ]] || { echo 'Set repository variable CURSEFORGE_PROJECT_ID.' >&2; exit 1; }
-            [[ -n "$MODRINTH_TOKEN" && -n "$CURSEFORGE_TOKEN" ]] || { echo 'Add separate MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets.' >&2; exit 1; }
+            if [[ "$PLATFORM" != curseforge ]]; then
+              [[ "$MODRINTH_PROJECT_ID" =~ ^[A-Za-z0-9]{8}$ && -n "$MODRINTH_TOKEN" ]] || { echo 'Set MODRINTH_PROJECT_ID variable and MODRINTH_TOKEN secret.' >&2; exit 1; }
+            fi
+            if [[ "$PLATFORM" != modrinth ]]; then
+              [[ "$CURSEFORGE_PROJECT_ID" =~ ^[0-9]+$ && -n "$CURSEFORGE_TOKEN" ]] || { echo 'Set CURSEFORGE_PROJECT_ID variable and CURSEFORGE_TOKEN secret.' >&2; exit 1; }
+            fi
           fi
 
       - name: Verify Modrinth project access
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.platform != 'curseforge' }}
         env:
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -82,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [modrinth, curseforge]
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["modrinth","curseforge"]' || format('["{0}"]', inputs.platform)) }}
         loader: [fabric, neoforge]
     steps:
       - name: Checkout publishing tools
