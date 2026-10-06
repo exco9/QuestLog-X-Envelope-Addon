@@ -11,7 +11,10 @@ import urllib.request
 def description(readme: str, feature_url: str) -> str:
     if not feature_url.startswith("https://cdn.modrinth.com/"):
         raise ValueError("Expected a public Modrinth CDN image URL")
-    body = readme.replace("(.github/images/features.png)", f"({feature_url})")
+    feature_pattern = r"(!\[Quest letters, package rewards, magic circles and player signatures\])\([^)]+\)"
+    body, replacements = re.subn(feature_pattern, lambda match: f"{match.group(1)}({feature_url})", readme)
+    if replacements != 1:
+        raise ValueError("Expected one feature overview image in README")
     body = re.sub(r"^\[Download v[^\n]+\n", "", body, flags=re.M)
     body = re.sub(r"^\[Full setup & JSON examples\][^\n]+\n", "", body, flags=re.M)
     body = body.replace("Licensed under [GPL-3.0](LICENSE).", "Licensed under **GPL-3.0**.")
@@ -20,7 +23,7 @@ def description(readme: str, feature_url: str) -> str:
         raise ValueError("Platform description contains a relative or non-HTTPS link")
     if "FEATURE_IMAGE_URL" in body:
         raise ValueError("Unresolved feature image URL")
-    return body.strip() + "\n"
+    return re.sub(r"\n{3,}", "\n\n", body).strip() + "\n"
 
 
 def main():

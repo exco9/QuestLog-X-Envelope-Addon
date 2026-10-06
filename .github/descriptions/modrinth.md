@@ -1,6 +1,6 @@
 ![QuestLog × Envelope — quests delivered by mail](https://media.forgecdn.net/attachments/description/null/description_883335d8-a9df-4b5e-bf0b-a41ddd9135b7.png)
 
-# QuestLog × Envelope
+# QuestLog × Envelope Addon
 
 Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitations, send supplies, and let players accept a contract with a magical signature.
 
@@ -8,16 +8,15 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 ## What can you do?
 
-![Quest letters, package rewards, magic circles and player signatures](FEATURE_IMAGE_URL)
+![Quest letters, package rewards, magic circles and player signatures](https://cdn.modrinth.com/data/oibxnCeY/images/10714e4a78822c8e022623538d5907e6d8fa565d.png)
 
-- **Letters and packages:** deliver quest invitations, rewards and supplies through Envelope, with rich text, wax seals and multi-page packages.
-- **Magic circles:** hold to unlock a quest or run a command, with configurable position, size, colors and enchanted shine.
-- **Player signatures:** sign once with a name or `@s`, an optional frame and command, feather animation and writing sound.
-- **Mail objectives:** track received quest mail or sent deliveries, with recipient, text and item filters.
+- **Build mail quests:** track received quest mail or sent deliveries, with recipient, text and item filters.
 - **Design letters in-game:** format text, place circles and signatures anywhere on the paper, then save the quest in one click.
 - **Add animated text:** optional **Ember's Text API 3.x** support, with an editor preview.
 
 Mail transport, mailboxes, pigeons and wax seals come from **Envelope**; quest progression comes from **Questlog**.
+
+![Showcase gif](https://i.ibb.co/hRg62wvy/playtest.gif)
 
 ## Letter reward example
 

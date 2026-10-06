@@ -7,13 +7,10 @@ Connect Questlog and Envelope with quest mail, package rewards, magic circles an
 - [CurseForge](curseforge.md): paste the file's contents into the description editor in Markdown mode. CurseForge provides both [Markdown and visual editors](https://support.curseforge.com/support/solutions/articles/9000199552-overview-of-the-project-submission-page).
 - [Modrinth](modrinth.md): paste the file's contents into the project description, which uses [GitHub Flavored Markdown](https://support.modrinth.com/en/articles/8801962-advanced-markdown-formatting).
 
-Before pasting either description:
+Both descriptions now mirror the README, including the banner, feature overview, showcase GIF and JSON example. All images use public HTTPS URLs; no image relies on access to this private repository.
 
-1. Upload [features.png](../images/features.png) through the platform's image uploader.
-2. Copy the uploaded image's public URL and replace `FEATURE_IMAGE_URL` in the description.
-3. Paste the complete description into the Markdown editor.
+The **Sync project descriptions** GitHub workflow uploads the current feature image to the Modrinth gallery, updates the Modrinth project body and produces ready-to-paste CurseForge Markdown. It reuses an identical gallery image on later runs. The workflow retains a backup of the previous Modrinth description.
 
-The banner already uses the public CurseForge image URL from the project README.
-The repository is private, so the descriptions omit GitHub download and guide
-links that visitors cannot access. The feature image is also described in the
-text for accessibility.
+CurseForge's author upload token does not expose description editing through the documented upload API. Apply [curseforge.md](curseforge.md) through the connected author dashboard's Markdown editor.
+
+The descriptions omit private GitHub download and guide links that visitors cannot access. The feature image has descriptive alternative text for accessibility.
