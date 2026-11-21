@@ -10,7 +10,7 @@ Turn **Questlog quests** into **Envelope letters and packages**. Deliver invitat
 
 ## What can you do?
 
-![Quest letters, package rewards, magic circles and player signatures](https://cdn.modrinth.com/data/oibxnCeY/images/10714e4a78822c8e022623538d5907e6d8fa565d.png)
+![Quest letters, package rewards, magic circles and player signatures](https://raw.githubusercontent.com/exco9/mods-media/fef14caf7081d16f3a7fa3cc2c6b448ad71276e0/features.png)
 
 - **Build mail quests:** track received quest mail or sent deliveries, with recipient, text and item filters.
 - **Design letters in-game:** format text, place circles and signatures anywhere on the paper, then save the quest in one click.

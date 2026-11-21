@@ -8,9 +8,16 @@ import urllib.parse
 import urllib.request
 
 
+def is_public_feature_url(url: str) -> bool:
+    return url.startswith("https://cdn.modrinth.com/") or re.fullmatch(
+        r"https://raw\.githubusercontent\.com/exco9/mods-media/[0-9a-f]{40}/features\.png",
+        url,
+    ) is not None
+
+
 def description(readme: str, feature_url: str) -> str:
-    if not feature_url.startswith("https://cdn.modrinth.com/"):
-        raise ValueError("Expected a public Modrinth CDN image URL")
+    if not is_public_feature_url(feature_url):
+        raise ValueError("Expected a public QLXE feature image URL")
     feature_pattern = r"(!\[Quest letters, package rewards, magic circles and player signatures\])\([^)]+\)"
     body, replacements = re.subn(feature_pattern, lambda match: f"{match.group(1)}({feature_url})", readme)
     if replacements != 1:
@@ -60,9 +67,9 @@ def main():
         return None
 
     readme = Path("README.md").read_text(encoding="utf-8")
-    existing = re.search(r"!\[Quest letters, package rewards, magic circles and player signatures\]\((https://cdn\.modrinth\.com/[^)]+)\)", readme)
+    existing = re.search(r"!\[Quest letters, package rewards, magic circles and player signatures\]\((https://[^)]+)\)", readme)
     feature_url = None
-    if existing:
+    if existing and is_public_feature_url(existing.group(1)):
         # CDN images may be optimized, so their bytes differ from the source PNG.
         with urllib.request.urlopen(existing.group(1), timeout=30) as response:
             if response.headers.get_content_type().startswith("image/"):
